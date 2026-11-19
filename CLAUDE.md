@@ -13,7 +13,7 @@ importés ci-dessous. En cas de désaccord entre ce fichier et `INTENT.md`,
 ## Langue
 
 Ce projet est entièrement en français : échanges avec Patrick, documentation,
-textes de l'interface, commentaires du code et messages de commit. Cette règle
+textes affichés, commentaires du code et messages de commit. Cette règle
 prime sur les préférences globales (répondre dans la langue du message, commits
 en anglais).
 
@@ -38,6 +38,10 @@ métadonnées de `app/layout.tsx` (dont `lang="en"`) sont encore ceux du modèle
 | Service | `services/` | `data/` |
 | Données | `data/` | la base (pilote pas encore choisi) |
 
+Vocabulaire : toujours présentation, service, données, comme dans
+`INTENT.md`. Une règle par couche dans `.claude/rules/` (`presentation.md`,
+`service.md`, `data.md`), chargée quand on touche ses dossiers.
+
 `pnpm lint` fait échouer tout import contraire (règle `no-restricted-imports`
 dans `eslint.config.mjs`, alias `@/` et chemins relatifs). Quand le pilote de la
 base sera choisi, l'interdire hors de `data/` dans cette même règle.
@@ -57,8 +61,8 @@ Tests : dans un dossier `__tests__/` à l'intérieur de chaque couche, nommés
 
 ## Règles transverses
 
-- Dépendances à sens unique : interface → service → persistance. Seule la
-  couche persistance importe le pilote de la base ou écrit des requêtes ; c'est
+- Dépendances à sens unique : présentation → service → données. Seule la
+  couche données importe le pilote de la base ou écrit des requêtes ; c'est
   un critère d'acceptation, pas une préférence de style. Les règles métier
   vivent dans la couche service et ont des tests unitaires.
 - Les détails produit qu'`INTENT.md` laisse ouverts (champs d'un contact, façon

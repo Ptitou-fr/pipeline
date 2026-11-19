@@ -4,9 +4,11 @@ import nextTs from "eslint-config-next/typescript";
 
 // Sens des dépendances : présentation → service → données (voir INTENT.md).
 // Chaque entrée interdit d'importer une couche, via l'alias `@/` ou un chemin relatif.
-const layer = (name) => ({
-  regex: `^(@/|(\\.\\.?/)+)${name}(/|$)`,
-  message: `Import interdit : la couche « ${name} » n'est pas accessible depuis ici (voir INTENT.md).`,
+// Dossier → nom de la couche, pour le message d'erreur.
+const LAYER_NAMES = { app: "présentation", components: "présentation", services: "service", data: "données" };
+const layer = (dir) => ({
+  regex: `^(@/|(\\.\\.?/)+)${dir}(/|$)`,
+  message: `Import interdit : la couche ${LAYER_NAMES[dir]} (${dir}/) n'est pas accessible depuis ici (voir .claude/rules/).`,
 });
 const forbidLayers = (files, names) => ({
   files,
