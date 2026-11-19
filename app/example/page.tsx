@@ -2,6 +2,7 @@
 // habillé avec le design system Menthe (utilitaires Tailwind issus des tokens shadcn).
 // Rendu en clair et en sombre côte à côte : `.dark` sur un conteneur redéfinit les tokens de son sous-arbre.
 import { Example } from "@/components/example";
+import { Button } from "@/components/ui/button";
 
 function Preview({ dark = false }: { dark?: boolean }) {
   return (
@@ -34,18 +35,8 @@ function Preview({ dark = false }: { dark?: boolean }) {
         </div>
 
         <div className="flex flex-wrap justify-end gap-2">
-          <button
-            type="button"
-            className="h-9 rounded-full border border-input px-4 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
-          >
-            Secondaire
-          </button>
-          <button
-            type="button"
-            className="h-9 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground hover:brightness-110"
-          >
-            Principal
-          </button>
+          <Button variant="outline">Secondaire</Button>
+          <Button>Principal</Button>
         </div>
       </article>
     </section>

@@ -91,8 +91,10 @@ Tailwind qui en découlent (`bg-primary`, `text-muted-foreground`,
 - Polices : Plus Jakarta Sans (`font-sans`, titres en `font-bold`) et DM Mono
   (`font-mono`), chargées par `next/font` dans `app/layout.tsx` et reliées par
   `@theme inline`.
-- Boutons en pilule : un composant bouton ajouté via shadcn doit passer en
-  `rounded-full`.
+- Boutons : `components/ui/button.tsx` (shadcn, adapté à Menthe : `rounded-full`,
+  tailles relevées). Tout bouton passe par ce composant, jamais par un
+  `<button>` stylé à la main. Un `shadcn add` qui réécrit ce fichier efface
+  l'adaptation.
 - Le mode sombre s'active par la classe `.dark` sur `<html>` ; rien ne la pose
   encore.
 - shadcn en style `base-nova` sur `@base-ui/react` (pas Radix) ; les composants
