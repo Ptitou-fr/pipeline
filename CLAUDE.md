@@ -76,7 +76,25 @@ Tests : dans un dossier `__tests__/` à l'intérieur de chaque couche, nommés
   API de cache, de chargement de données ou de routage.
 - Tailwind v4 est branché via une règle de loader Turbopack dans
   `next.config.ts`, pas via PostCSS ; les jetons de thème sont dans
-  `app/globals.css`.
+  `app/globals.css`. Constaté une fois : après une modification de
+  `globals.css`, `pnpm dev` a continué de servir l'ancien CSS jusqu'à un
+  redémarrage.
+
+## Design system : Menthe
+
+Choisi parmi les options de `design-options.html` (référence visuelle, clair et
+sombre). Il vit dans les tokens shadcn de `app/globals.css` (`:root` et
+`.dark`, en oklch, `--radius: 0.875rem`) : styler avec les utilitaires
+Tailwind qui en découlent (`bg-primary`, `text-muted-foreground`,
+`rounded-lg`…), jamais avec des couleurs en dur.
+
+- Polices : Plus Jakarta Sans (`font-sans`, titres en `font-bold`) et DM Mono
+  (`font-mono`), chargées par `next/font` dans `app/layout.tsx` et reliées par
+  `@theme inline`.
+- Boutons en pilule : un composant bouton ajouté via shadcn doit passer en
+  `rounded-full`.
+- Le mode sombre s'active par la classe `.dark` sur `<html>` ; rien ne la pose
+  encore.
 - shadcn en style `base-nova` sur `@base-ui/react` (pas Radix) ; les composants
   vont dans `@/components/ui`, les icônes viennent de `lucide-react`. `cn` est
   réexporté depuis le paquet `cn` dans `lib/utils.ts`.
