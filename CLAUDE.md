@@ -21,12 +21,26 @@ Les commits gardent le préfixe du dépôt (`chore:`, `feat:`, …) suivi d'une
 description en français, et conservent le trailer `Co-Authored-By` de Claude
 Code.
 
+Exception : les identifiants du code et les noms de dossiers et de fichiers sont
+en anglais.
+
 ## État
 
-Squelette `create-next-app` tout juste initialisé avec shadcn : pas encore de
-code produit, de composants, de tests ni de base de données. `app/page.tsx` et
-les métadonnées de `app/layout.tsx` (dont `lang="en"`) sont encore ceux du
-modèle.
+Les trois couches existent, chacune avec un exemple vide (`example.ts(x)`) et
+son test ; aucune fonctionnalité, aucune base. `app/page.tsx` et les
+métadonnées de `app/layout.tsx` (dont `lang="en"`) sont encore ceux du modèle.
+
+## Couches
+
+| Couche | Dossier | Peut importer |
+|---|---|---|
+| Présentation | `app/`, `components/` | `services/` |
+| Service | `services/` | `data/` |
+| Données | `data/` | la base (pilote pas encore choisi) |
+
+`pnpm lint` fait échouer tout import contraire (règle `no-restricted-imports`
+dans `eslint.config.mjs`, alias `@/` et chemins relatifs). Quand le pilote de la
+base sera choisi, l'interdire hors de `data/` dans cette même règle.
 
 ## Commandes
 
@@ -34,11 +48,12 @@ pnpm uniquement (`packageManager: pnpm@10.32.1`).
 
 - `pnpm dev` / `pnpm build` / `pnpm start`
 - `pnpm lint` (ESLint 9, config plate, `eslint-config-next` core-web-vitals + typescript)
-- `pnpm test` (`vitest run --passWithNoTests`) ; un fichier : `pnpm vitest run chemin/vers/fichier.test.ts` ; un test : ajouter `-t "nom"`
+- `pnpm test` (`vitest run`) ; un fichier : `pnpm vitest run chemin/vers/fichier.test.ts` ; un test : ajouter `-t "nom"`
 - Ajouter un composant shadcn : `pnpm dlx shadcn@latest add <nom>`
 
-Il n'existe pas encore de `vitest.config.*` : l'alias `@/*` de `tsconfig.json`
-ne se résout donc pas dans les tests tant qu'il n'est pas ajouté.
+Tests : dans un dossier `__tests__/` à l'intérieur de chaque couche, nommés
+`*.test.ts(x)`. `vitest.config.mts` déclare l'alias `@` et l'environnement
+`node` ; les composants se testent par `renderToStaticMarkup` (pas de jsdom).
 
 ## Règles transverses
 
