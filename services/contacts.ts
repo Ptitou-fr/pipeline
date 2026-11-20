@@ -5,9 +5,11 @@ import {
   findContactById,
   insertContact,
   updateContact as updateContactRecord,
+  updateContactStage,
+  type ContactFields,
   type ContactRecord,
-  type NewContactRecord,
 } from "@/data/contacts";
+import { INITIAL_STAGE, stageSchema } from "@/services/stages";
 
 export type Contact = ContactRecord;
 
@@ -96,7 +98,7 @@ export function searchContacts(query: unknown): SearchContactsResult {
   return { status: "ok", contacts: contacts.filter((c) => matches(c.name) || matches(c.company)), query: text };
 }
 
-function parseContact(input: ContactInput): { fields: NewContactRecord } | { errors: ContactErrors } {
+function parseContact(input: ContactInput): { fields: ContactFields } | { errors: ContactErrors } {
   const parsed = contactSchema.safeParse(input);
   if (parsed.success) return { fields: parsed.data };
   const errors: ContactErrors = {};
@@ -135,7 +137,7 @@ export function createContact(
 
   if (!isConfirmed(confirmDuplicate) && isDuplicate(parsed.fields.name)) return { status: "duplicate" };
 
-  return { status: "created", contact: insertContact(parsed.fields) };
+  return { status: "created", contact: insertContact({ ...parsed.fields, stage: INITIAL_STAGE }) };
 }
 
 export function updateContact(
@@ -152,5 +154,20 @@ export function updateContact(
   if (!isConfirmed(confirmDuplicate) && isDuplicate(parsed.fields.name, contactId)) return { status: "duplicate" };
 
   const contact = updateContactRecord(contactId, parsed.fields);
+  return contact ? { status: "updated", contact } : { status: "not_found" };
+}
+
+export type ChangeStageResult = { status: "updated"; contact: Contact } | { status: "invalid" } | { status: "not_found" };
+
+// Lot 4 : on passe librement d'une étape à l'autre, mais seulement parmi les cinq.
+export function changeStage(id: unknown, stage: unknown): ChangeStageResult {
+  // Les deux entrées sont validées avant tout accès à la couche données.
+  const contactId = parseId(id);
+  if (contactId === null) return { status: "not_found" };
+  const parsed = stageSchema.safeParse(stage);
+  if (!parsed.success) return { status: "invalid" };
+  if (!findContactById(contactId)) return { status: "not_found" };
+
+  const contact = updateContactStage(contactId, parsed.data);
   return contact ? { status: "updated", contact } : { status: "not_found" };
 }

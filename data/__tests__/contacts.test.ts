@@ -1,4 +1,5 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { DatabaseSync } from "node:sqlite";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -27,7 +28,7 @@ describe("data/contacts", () => {
 
   it("relit le contact inséré, avec son id", async () => {
     const { insertContact, findAllContacts } = await load();
-    const fields = { name: "Alice Martin", company: "Acme", email: "alice@acme.fr", phone: "06 12 34 56 78" };
+    const fields = { name: "Alice Martin", company: "Acme", email: "alice@acme.fr", phone: "06 12 34 56 78", stage: "contacted" };
 
     const created = insertContact(fields);
 
@@ -37,14 +38,14 @@ describe("data/contacts", () => {
 
   it("conserve les champs facultatifs à null", async () => {
     const { insertContact, findAllContacts } = await load();
-    insertContact({ name: "Bob", company: null, email: null, phone: null });
+    insertContact({ name: "Bob", company: null, email: null, phone: null, stage: "to_contact" });
 
-    expect(findAllContacts()).toEqual([{ id: expect.any(Number), name: "Bob", company: null, email: null, phone: null }]);
+    expect(findAllContacts()).toEqual([{ id: expect.any(Number), name: "Bob", company: null, email: null, phone: null, stage: "to_contact" }]);
   });
 
   it("retrouve le contact après un redémarrage (nouvelle connexion sur le même fichier)", async () => {
     const first = await load();
-    const created = first.insertContact({ name: "Alice", company: null, email: null, phone: null });
+    const created = first.insertContact({ name: "Alice", company: null, email: null, phone: null, stage: "to_contact" });
 
     vi.resetModules();
     const second = await load();
@@ -55,7 +56,7 @@ describe("data/contacts", () => {
 
   it("retrouve un contact par son id, ou null s'il n'existe pas", async () => {
     const { insertContact, findContactById } = await load();
-    const created = insertContact({ name: "Alice", company: "Acme", email: null, phone: null });
+    const created = insertContact({ name: "Alice", company: "Acme", email: null, phone: null, stage: "to_contact" });
 
     expect(findContactById(created.id)).toEqual(created);
     expect(findContactById(created.id + 1)).toBeNull();
@@ -63,13 +64,13 @@ describe("data/contacts", () => {
 
   it("modifie un contact et renvoie ses nouvelles valeurs", async () => {
     const { insertContact, updateContact, findAllContacts } = await load();
-    const created = insertContact({ name: "Alice", company: "Acme", email: "a@acme.fr", phone: null });
-    const other = insertContact({ name: "Bob", company: null, email: null, phone: null });
+    const created = insertContact({ name: "Alice", company: "Acme", email: "a@acme.fr", phone: null, stage: "to_contact" });
+    const other = insertContact({ name: "Bob", company: null, email: null, phone: null, stage: "to_contact" });
     const fields = { name: "Alice Martin", company: null, email: "alice@martin.fr", phone: "06 12" };
 
     const updated = updateContact(created.id, fields);
 
-    expect(updated).toEqual({ id: created.id, ...fields });
+    expect(updated).toEqual({ id: created.id, ...fields, stage: "to_contact" });
     expect(findAllContacts()).toEqual([updated, other]);
   });
 
@@ -82,12 +83,62 @@ describe("data/contacts", () => {
 
   it("conserve la modification après un redémarrage (nouvelle connexion sur le même fichier)", async () => {
     const first = await load();
-    const created = first.insertContact({ name: "Alice", company: null, email: null, phone: null });
+    const created = first.insertContact({ name: "Alice", company: null, email: null, phone: null, stage: "to_contact" });
     const updated = first.updateContact(created.id, { name: "Alice Martin", company: "Acme", email: null, phone: null });
 
     vi.resetModules();
     const second = await load();
 
     expect(second.findContactById(created.id)).toEqual(updated);
+  });
+
+  // Lot 4 : étape du pipeline.
+  it("enregistre l'étape donnée à l'insertion et peut la changer seule", async () => {
+    const { insertContact, updateContactStage, findContactById } = await load();
+    const created = insertContact({ name: "Alice", company: "Acme", email: null, phone: null, stage: "to_contact" });
+
+    const moved = updateContactStage(created.id, "won");
+
+    expect(moved).toEqual({ ...created, stage: "won" });
+    expect(findContactById(created.id)).toEqual(moved);
+  });
+
+  it("renvoie null quand le contact dont on change l'étape n'existe pas", async () => {
+    const { updateContactStage } = await load();
+
+    expect(updateContactStage(42, "won")).toBeNull();
+  });
+
+  it("ne change pas l'étape quand on modifie les informations du contact", async () => {
+    const { insertContact, updateContactStage, updateContact } = await load();
+    const created = insertContact({ name: "Alice", company: null, email: null, phone: null, stage: "to_contact" });
+    updateContactStage(created.id, "in_discussion");
+
+    expect(updateContact(created.id, { name: "Alice Martin", company: null, email: null, phone: null })?.stage).toBe("in_discussion");
+  });
+
+  it("conserve l'étape après un redémarrage (nouvelle connexion sur le même fichier)", async () => {
+    const first = await load();
+    const created = first.insertContact({ name: "Alice", company: null, email: null, phone: null, stage: "to_contact" });
+    first.updateContactStage(created.id, "contacted");
+
+    vi.resetModules();
+    const second = await load();
+
+    expect(second.findContactById(created.id)?.stage).toBe("contacted");
+  });
+
+  it("ajoute l'étape « to_contact » aux contacts d'une base créée avant le lot 4", async () => {
+    const path = join(dir, "ancienne.db");
+    mkdirSync(dir, { recursive: true });
+    const old = new DatabaseSync(path);
+    old.exec("CREATE TABLE contacts (id INTEGER PRIMARY KEY, name TEXT NOT NULL, company TEXT, email TEXT, phone TEXT)");
+    old.exec("INSERT INTO contacts (name) VALUES ('Ancien')");
+    old.close();
+    vi.stubEnv("PIPELINE_DB_PATH", path);
+
+    const { findAllContacts } = await load();
+
+    expect(findAllContacts()).toEqual([{ id: 1, name: "Ancien", company: null, email: null, phone: null, stage: "to_contact" }]);
   });
 });

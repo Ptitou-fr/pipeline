@@ -4,9 +4,10 @@ import {
   findAllContacts,
   findContactById,
   updateContact as updateContactRecord,
+  updateContactStage,
   type ContactRecord,
 } from "@/data/contacts";
-import { createContact, getContact, listContacts, searchContacts, updateContact } from "@/services/contacts";
+import { changeStage, createContact, getContact, listContacts, searchContacts, updateContact } from "@/services/contacts";
 
 // On teste les règles, pas la base : la couche données est simulée.
 vi.mock("@/data/contacts", () => ({
@@ -14,9 +15,10 @@ vi.mock("@/data/contacts", () => ({
   findAllContacts: vi.fn(),
   findContactById: vi.fn(),
   updateContact: vi.fn(),
+  updateContactStage: vi.fn(),
 }));
 
-const record = (id: number, name: string): ContactRecord => ({ id, name, company: null, email: null, phone: null });
+const record = (id: number, name: string): ContactRecord => ({ id, name, company: null, email: null, phone: null, stage: "to_contact" });
 
 beforeEach(() => {
   vi.mocked(insertContact).mockReset();
@@ -26,7 +28,9 @@ beforeEach(() => {
   vi.mocked(findContactById).mockReset();
   vi.mocked(findContactById).mockReturnValue(null);
   vi.mocked(updateContactRecord).mockReset();
-  vi.mocked(updateContactRecord).mockImplementation((id, fields) => ({ id, ...fields }));
+  vi.mocked(updateContactRecord).mockImplementation((id, fields) => ({ id, ...fields, stage: "to_contact" }));
+  vi.mocked(updateContactStage).mockReset();
+  vi.mocked(updateContactStage).mockImplementation((id, stage) => ({ ...record(id, "Alice"), stage }));
 });
 
 describe("listContacts", () => {
@@ -45,14 +49,17 @@ describe("createContact", () => {
   it("crée un contact valide avec ses valeurs nettoyées", () => {
     const result = createContact({ name: "  Alice  ", company: " Acme ", email: " alice@acme.fr ", phone: " 06 12 " });
 
-    expect(insertContact).toHaveBeenCalledWith({ name: "Alice", company: "Acme", email: "alice@acme.fr", phone: "06 12" });
-    expect(result).toEqual({ status: "created", contact: { id: 1, name: "Alice", company: "Acme", email: "alice@acme.fr", phone: "06 12" } });
+    expect(insertContact).toHaveBeenCalledWith({ name: "Alice", company: "Acme", email: "alice@acme.fr", phone: "06 12", stage: "to_contact" });
+    expect(result).toEqual({
+      status: "created",
+      contact: { id: 1, name: "Alice", company: "Acme", email: "alice@acme.fr", phone: "06 12", stage: "to_contact" },
+    });
   });
 
   it("enregistre les champs facultatifs vides à null", () => {
     createContact({ name: "Bob", company: "", email: "  ", phone: "" });
 
-    expect(insertContact).toHaveBeenCalledWith({ name: "Bob", company: null, email: null, phone: null });
+    expect(insertContact).toHaveBeenCalledWith({ name: "Bob", company: null, email: null, phone: null, stage: "to_contact" });
   });
 
   it.each(["", "   "])("refuse un nom vide (%j) et ne crée rien", (name) => {
@@ -174,7 +181,10 @@ describe("updateContact", () => {
     const result = updateContact("3", { name: " Alice Martin ", company: " Acme ", email: "", phone: " 06 12 " });
 
     expect(updateContactRecord).toHaveBeenCalledWith(3, { name: "Alice Martin", company: "Acme", email: null, phone: "06 12" });
-    expect(result).toEqual({ status: "updated", contact: { id: 3, name: "Alice Martin", company: "Acme", email: null, phone: "06 12" } });
+    expect(result).toEqual({
+      status: "updated",
+      contact: { id: 3, name: "Alice Martin", company: "Acme", email: null, phone: "06 12", stage: "to_contact" },
+    });
   });
 
   it.each(["", "   "])("refuse un nom vidé (%j) et n'enregistre rien", (name) => {
@@ -312,5 +322,37 @@ describe("searchContacts", () => {
     expect(searchContacts("d".repeat(101))).toEqual({ status: "invalid", error: "too_long" });
     expect(findAllContacts).not.toHaveBeenCalled();
     expect(searchContacts("d".repeat(100)).status).toBe("ok");
+  });
+});
+
+describe("étape d'un contact (lot 4)", () => {
+  beforeEach(() => {
+    vi.mocked(findContactById).mockImplementation((id) => (id === 3 ? record(3, "Alice") : null));
+  });
+
+  it("fait démarrer un nouveau contact à « À contacter » (to_contact)", () => {
+    const result = createContact({ name: "Alice" });
+
+    expect(insertContact).toHaveBeenCalledWith(expect.objectContaining({ stage: "to_contact" }));
+    expect(result).toMatchObject({ status: "created", contact: { stage: "to_contact" } });
+  });
+
+  it.each(["to_contact", "contacted", "in_discussion", "won", "lost"])("accepte librement l'étape %s", (stage) => {
+    expect(changeStage("3", stage)).toEqual({ status: "updated", contact: { ...record(3, "Alice"), stage } });
+    expect(updateContactStage).toHaveBeenCalledWith(3, stage);
+  });
+
+  it.each(["archived", "Gagné", "WON", "", 3, null, undefined, ["won"], "won".repeat(400)])(
+    "refuse une étape hors des cinq (%j) sans rien enregistrer",
+    (stage) => {
+      expect(changeStage("3", stage)).toEqual({ status: "invalid" });
+      expect(findContactById).not.toHaveBeenCalled();
+      expect(updateContactStage).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["99", "abc", undefined, "12345678901234567890"])("signale un contact introuvable (%j) sans rien enregistrer", (id) => {
+    expect(changeStage(id, "won")).toEqual({ status: "not_found" });
+    expect(updateContactStage).not.toHaveBeenCalled();
   });
 });

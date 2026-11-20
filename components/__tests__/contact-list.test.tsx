@@ -13,8 +13,8 @@ describe("components/contact-list", () => {
     const html = renderToStaticMarkup(
       <ContactList
         contacts={[
-          { id: 1, name: "Alice Martin", company: "Acme", email: "alice@acme.fr", phone: "06 12 34 56 78" },
-          { id: 2, name: "Bob", company: null, email: null, phone: null },
+          { id: 1, name: "Alice Martin", company: "Acme", email: "alice@acme.fr", phone: "06 12 34 56 78", stage: "to_contact" },
+          { id: 2, name: "Bob", company: null, email: null, phone: null, stage: "to_contact" },
         ]}
       />,
     );
@@ -30,8 +30,8 @@ describe("components/contact-list", () => {
     const html = renderToStaticMarkup(
       <ContactList
         contacts={[
-          { id: 1, name: "Alice", company: null, email: null, phone: null },
-          { id: 2, name: "Bob", company: null, email: null, phone: null },
+          { id: 1, name: "Alice", company: null, email: null, phone: null, stage: "to_contact" },
+          { id: 2, name: "Bob", company: null, email: null, phone: null, stage: "to_contact" },
         ]}
       />,
     );
@@ -46,5 +46,21 @@ describe("components/contact-list", () => {
 
     expect(html).toContain("Aucun résultat pour « zzz »");
     expect(html).not.toContain("Aucun contact pour l’instant");
+  });
+
+  it("affiche l'étape de chaque contact dans un sélecteur nommé", () => {
+    const html = renderToStaticMarkup(
+      <ContactList
+        contacts={[
+          { id: 1, name: "Alice", company: null, email: null, phone: null, stage: "contacted" },
+          { id: 2, name: "Bob", company: null, email: null, phone: null, stage: "won" },
+        ]}
+      />,
+    );
+
+    expect(html).toContain('aria-label="Étape de Alice"');
+    expect(html).toContain("Contacté");
+    expect(html).toContain('aria-label="Étape de Bob"');
+    expect(html).toContain("Gagné");
   });
 });

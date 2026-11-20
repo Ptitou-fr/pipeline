@@ -1,8 +1,8 @@
 "use server";
 // Couche présentation : reçoit le formulaire, délègue au service, puis revient à la liste.
-import { revalidatePath } from "next/cache";
+import { refresh, revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
-import { createContact, updateContact, type ContactErrors } from "@/services/contacts";
+import { changeStage, createContact, updateContact, type ContactErrors } from "@/services/contacts";
 
 export type ContactFormValues = { name: string; company: string; email: string; phone: string };
 
@@ -48,4 +48,11 @@ export async function editContact(id: string, _prev: ContactFormState, formData:
 
   revalidatePath("/");
   redirect("/");
+}
+
+// Lot 4 : id et étape arrivent bruts du navigateur ; le service les valide. La liste est rafraîchie
+// dans tous les cas, pour toujours montrer l'étape réellement enregistrée.
+export async function changeContactStage(id: unknown, stage: unknown): Promise<void> {
+  changeStage(id, stage);
+  refresh();
 }

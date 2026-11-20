@@ -1,6 +1,7 @@
 // Couche présentation : affiche la liste reçue, dans l'ordre donné par le service.
 import Link from "next/link";
 import type { Contact } from "@/services/contacts";
+import { StageSelect } from "@/components/stage-select";
 import { Button } from "@/components/ui/button";
 
 // `query` : le texte de la recherche en cours, tel que renvoyé par le service (vide sans recherche).
@@ -30,9 +31,12 @@ export function ContactList({ contacts, query = "" }: { contacts: Contact[]; que
               </span>
             )}
           </div>
-          <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/contacts/${contact.id}/edit`} />}>
-            Modifier
-          </Button>
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            <StageSelect contactId={contact.id} contactName={contact.name} stage={contact.stage} />
+            <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/contacts/${contact.id}/edit`} />}>
+              Modifier
+            </Button>
+          </div>
         </li>
       ))}
     </ul>

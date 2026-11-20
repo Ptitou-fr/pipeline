@@ -83,10 +83,10 @@ liste affiche aussitôt sa nouvelle étape. Le changement est enregistré.
 
 **Critères d'acceptation**
 
-- [ ] Étant donné un nouveau contact, quand il est créé, alors il est à « À contacter ».
-- [ ] Étant donné un contact à une étape, quand je choisis une autre des cinq étapes, alors la liste affiche sa nouvelle étape.
-- [ ] Étant donné une étape changée, quand je redémarre le serveur, alors l'étape est conservée.
-- [ ] Étant donné une étape hors des cinq, quand le service la reçoit, alors il la refuse, et ce cas est testé.
+- [x] Étant donné un nouveau contact, quand il est créé, alors il est à « À contacter ».
+- [x] Étant donné un contact à une étape, quand je choisis une autre des cinq étapes, alors la liste affiche sa nouvelle étape.
+- [x] Étant donné une étape changée, quand je redémarre le serveur, alors l'étape est conservée.
+- [x] Étant donné une étape hors des cinq, quand le service la reçoit, alors il la refuse, et ce cas est testé.
 
 ## Lot 5 · Voir qui relancer aujourd'hui
 
