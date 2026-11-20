@@ -13,6 +13,9 @@ relance…) va dans la couche service.
 
 ## Règles
 
+- Ne valide ni ne convertit les entrées (formulaire, `params`,
+  `searchParams`) : elle les passe brutes au service, qui les valide par Zod
+  (voir `service.md`). Elle ne fait qu'afficher les erreurs renvoyées.
 - N'importe que la couche service (`@/services/…`), jamais la couche données
   (`@/data/…`) ni le pilote de la base.
 - N'utilise que les composants du design system Menthe (`components/ui/`). Si
