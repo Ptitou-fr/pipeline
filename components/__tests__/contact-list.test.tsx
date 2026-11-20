@@ -25,4 +25,19 @@ describe("components/contact-list", () => {
     }
     expect(html.indexOf("Alice Martin")).toBeLessThan(html.indexOf("Bob"));
   });
+
+  it("propose de modifier chaque contact", () => {
+    const html = renderToStaticMarkup(
+      <ContactList
+        contacts={[
+          { id: 1, name: "Alice", company: null, email: null, phone: null },
+          { id: 2, name: "Bob", company: null, email: null, phone: null },
+        ]}
+      />,
+    );
+
+    expect(html).toContain('href="/contacts/1/edit"');
+    expect(html).toContain('href="/contacts/2/edit"');
+    expect(html.match(/Modifier/g)).toHaveLength(2);
+  });
 });

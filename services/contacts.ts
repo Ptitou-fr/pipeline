@@ -1,6 +1,13 @@
 // Couche service : règles métier des contacts (validation par schéma Zod, doublons, tri). N'appelle que la couche données.
 import { z } from "zod";
-import { findAllContacts, insertContact, type ContactRecord } from "@/data/contacts";
+import {
+  findAllContacts,
+  findContactById,
+  insertContact,
+  updateContact as updateContactRecord,
+  type ContactRecord,
+  type NewContactRecord,
+} from "@/data/contacts";
 
 export type Contact = ContactRecord;
 
@@ -15,6 +22,12 @@ export type CreateContactResult =
   | { status: "created"; contact: Contact }
   | { status: "invalid"; errors: ContactErrors }
   | { status: "duplicate" };
+
+export type UpdateContactResult =
+  | { status: "updated"; contact: Contact }
+  | { status: "invalid"; errors: ContactErrors }
+  | { status: "duplicate" }
+  | { status: "not_found" };
 
 // Longueurs maximales, comptées après retrait des espaces autour (254 : limite pratique d'une adresse e-mail).
 export const MAX_LENGTH = { name: 100, company: 100, email: 254, phone: 30 } as const;
@@ -37,6 +50,14 @@ const contactSchema = z.object({
   phone: optional(text(MAX_LENGTH.phone)),
 });
 
+// Id venu de l'extérieur (URL…) : entier strictement positif.
+const idSchema = z.coerce.number().int().positive();
+
+// Confirmation d'un doublon, telle qu'envoyée par le formulaire : seule la valeur "1" confirme.
+const confirmSchema = z.literal("1");
+
+type ContactOptions = { confirmDuplicate?: unknown };
+
 // Comparaison des noms insensible à la casse et aux accents, pour le tri comme pour les doublons.
 const collator = new Intl.Collator("fr", { sensitivity: "base" });
 
@@ -44,24 +65,61 @@ export function listContacts(): Contact[] {
   return findAllContacts().sort((a, b) => collator.compare(a.name, b.name) || a.id - b.id);
 }
 
+function parseContact(input: ContactInput): { fields: NewContactRecord } | { errors: ContactErrors } {
+  const parsed = contactSchema.safeParse(input);
+  if (parsed.success) return { fields: parsed.data };
+  const errors: ContactErrors = {};
+  for (const issue of parsed.error.issues) {
+    const field = issue.path[0] as Field;
+    errors[field] ??= issue.message as ContactError; // la première erreur d'un champ suffit
+  }
+  return { errors };
+}
+
+// Un autre contact porte déjà ce nom ; `exceptId` exclut le contact modifié lui-même.
+function isDuplicate(name: string, exceptId?: number): boolean {
+  return findAllContacts().some((c) => c.id !== exceptId && collator.compare(c.name, name) === 0);
+}
+
+function isConfirmed(confirmDuplicate: unknown): boolean {
+  return confirmSchema.safeParse(confirmDuplicate).success;
+}
+
+function parseId(id: unknown): number | null {
+  const parsed = idSchema.safeParse(id);
+  return parsed.success ? parsed.data : null;
+}
+
+export function getContact(id: unknown): Contact | null {
+  const contactId = parseId(id);
+  return contactId === null ? null : findContactById(contactId);
+}
+
 export function createContact(
   input: ContactInput,
-  { confirmDuplicate = false }: { confirmDuplicate?: boolean } = {},
+  { confirmDuplicate }: ContactOptions = {},
 ): CreateContactResult {
-  const parsed = contactSchema.safeParse(input);
-  if (!parsed.success) {
-    const errors: ContactErrors = {};
-    for (const issue of parsed.error.issues) {
-      const field = issue.path[0] as Field;
-      errors[field] ??= issue.message as ContactError; // la première erreur d'un champ suffit
-    }
-    return { status: "invalid", errors };
-  }
-  const fields = parsed.data;
+  const parsed = parseContact(input);
+  if ("errors" in parsed) return { status: "invalid", errors: parsed.errors };
 
-  if (!confirmDuplicate && findAllContacts().some((c) => collator.compare(c.name, fields.name) === 0)) {
-    return { status: "duplicate" };
-  }
+  if (!isConfirmed(confirmDuplicate) && isDuplicate(parsed.fields.name)) return { status: "duplicate" };
 
-  return { status: "created", contact: insertContact(fields) };
+  return { status: "created", contact: insertContact(parsed.fields) };
+}
+
+export function updateContact(
+  id: unknown,
+  input: ContactInput,
+  { confirmDuplicate }: ContactOptions = {},
+): UpdateContactResult {
+  const contactId = parseId(id);
+  if (contactId === null || !findContactById(contactId)) return { status: "not_found" };
+
+  const parsed = parseContact(input);
+  if ("errors" in parsed) return { status: "invalid", errors: parsed.errors };
+
+  if (!isConfirmed(confirmDuplicate) && isDuplicate(parsed.fields.name, contactId)) return { status: "duplicate" };
+
+  const contact = updateContactRecord(contactId, parsed.fields);
+  return contact ? { status: "updated", contact } : { status: "not_found" };
 }

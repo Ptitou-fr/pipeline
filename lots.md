@@ -45,11 +45,11 @@ ses informations et je valide. La liste affiche les nouvelles valeurs.
 
 **Critères d'acceptation**
 
-- [ ] Étant donné un contact existant, quand j'ouvre sa modification, alors le formulaire montre ses valeurs actuelles.
-- [ ] Étant donné une modification valide, quand je valide, alors la liste affiche les nouvelles valeurs.
-- [ ] Étant donné un nom vidé, quand je valide, alors rien n'est enregistré et je vois ce qui manque.
-- [ ] Étant donné une modification en cours, quand j'annule, alors le contact reste inchangé.
-- [ ] Étant donné un contact modifié, quand je redémarre le serveur, alors la modification est conservée.
+- [x] Étant donné un contact existant, quand j'ouvre sa modification, alors le formulaire montre ses valeurs actuelles.
+- [x] Étant donné une modification valide, quand je valide, alors la liste affiche les nouvelles valeurs.
+- [x] Étant donné un nom vidé, quand je valide, alors rien n'est enregistré et je vois ce qui manque.
+- [x] Étant donné une modification en cours, quand j'annule, alors le contact reste inchangé.
+- [x] Étant donné un contact modifié, quand je redémarre le serveur, alors la modification est conservée.
 
 ## Lot 3 · Retrouver un contact
 

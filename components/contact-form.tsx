@@ -1,7 +1,8 @@
 "use client";
-// Couche présentation : formulaire d'ajout. La validation et les doublons sont décidés par le service.
+// Couche présentation : formulaire d'ajout et de modification. La validation et les doublons sont décidés par le service.
+import Link from "next/link";
 import { useActionState } from "react";
-import { addContact, type ContactFormState, type ContactFormValues } from "@/app/actions";
+import type { ContactFormAction, ContactFormValues } from "@/app/actions";
 import type { ContactError } from "@/services/contacts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,14 +11,14 @@ import { Label } from "@/components/ui/label";
 // Longueurs maximales par champ, fournies par la page serveur (le service en est la source).
 export type ContactLimits = Record<keyof ContactFormValues, number>;
 
-function message(field: keyof ContactFormValues, error: ContactError | undefined, limits: ContactLimits) {
+export function contactErrorMessage(field: keyof ContactFormValues, error: ContactError | undefined, limits: ContactLimits) {
   if (!error) return undefined;
   if (error === "required") return "Le nom est obligatoire.";
   if (error === "too_long") return `${limits[field]} caractères au plus.`;
   return field === "email" ? "Le format de l’e-mail n’est pas valide." : "Cette valeur n’est pas valide.";
 }
 
-const initialState: ContactFormState = { values: { name: "", company: "", email: "", phone: "" } };
+const EMPTY: ContactFormValues = { name: "", company: "", email: "", phone: "" };
 
 function Field({
   name,
@@ -51,10 +52,25 @@ function Field({
   );
 }
 
-export function ContactForm({ limits }: { limits: ContactLimits }) {
-  const [state, formAction, pending] = useActionState(addContact, initialState);
+type ContactFormProps = {
+  action: ContactFormAction;
+  limits: ContactLimits;
+  submitLabel: string;
+  // Valeurs de départ : vides pour un ajout, celles du contact pour une modification.
+  initialValues?: ContactFormValues;
+  // Lien « Annuler » (modification) : quitte le formulaire sans l'envoyer.
+  cancelHref?: string;
+};
+
+export function ContactForm({ action, limits, submitLabel, initialValues = EMPTY, cancelHref }: ContactFormProps) {
+  const [state, formAction, pending] = useActionState(action, { values: initialValues });
   const { values, errors } = state;
-  const error = (field: keyof ContactFormValues) => message(field, errors?.[field], limits);
+  const error = (field: keyof ContactFormValues) => contactErrorMessage(field, errors?.[field], limits);
+  const cancel = cancelHref && (
+    <Button variant="outline" nativeButton={false} render={<Link href={cancelHref} />}>
+      Annuler
+    </Button>
+  );
 
   return (
     <form action={formAction} noValidate className="flex flex-col gap-5">
@@ -72,18 +88,20 @@ export function ContactForm({ limits }: { limits: ContactLimits }) {
       {state.duplicate ? (
         <div role="alert" className="flex flex-col gap-3 rounded-xl border border-border bg-muted p-4">
           <p className="text-sm">
-            Un contact nommé « {values.name.trim()} » existe déjà. L’ajouter quand même ?
+            Un contact nommé « {values.name.trim()} » existe déjà. Continuer quand même ?
           </p>
           <div className="flex flex-wrap gap-2">
             <Button type="submit" name="confirmDuplicate" value="1" disabled={pending}>
-              Ajouter quand même
+              {submitLabel} quand même
             </Button>
+            {cancel}
           </div>
         </div>
       ) : (
-        <div className="flex justify-end">
+        <div className="flex flex-wrap justify-end gap-2">
+          {cancel}
           <Button type="submit" disabled={pending}>
-            Ajouter le contact
+            {submitLabel}
           </Button>
         </div>
       )}

@@ -52,4 +52,42 @@ describe("data/contacts", () => {
     expect(second).not.toBe(first);
     expect(second.findAllContacts()).toEqual([created]);
   });
+
+  it("retrouve un contact par son id, ou null s'il n'existe pas", async () => {
+    const { insertContact, findContactById } = await load();
+    const created = insertContact({ name: "Alice", company: "Acme", email: null, phone: null });
+
+    expect(findContactById(created.id)).toEqual(created);
+    expect(findContactById(created.id + 1)).toBeNull();
+  });
+
+  it("modifie un contact et renvoie ses nouvelles valeurs", async () => {
+    const { insertContact, updateContact, findAllContacts } = await load();
+    const created = insertContact({ name: "Alice", company: "Acme", email: "a@acme.fr", phone: null });
+    const other = insertContact({ name: "Bob", company: null, email: null, phone: null });
+    const fields = { name: "Alice Martin", company: null, email: "alice@martin.fr", phone: "06 12" };
+
+    const updated = updateContact(created.id, fields);
+
+    expect(updated).toEqual({ id: created.id, ...fields });
+    expect(findAllContacts()).toEqual([updated, other]);
+  });
+
+  it("renvoie null quand le contact à modifier n'existe pas", async () => {
+    const { updateContact, findAllContacts } = await load();
+
+    expect(updateContact(42, { name: "X", company: null, email: null, phone: null })).toBeNull();
+    expect(findAllContacts()).toEqual([]);
+  });
+
+  it("conserve la modification après un redémarrage (nouvelle connexion sur le même fichier)", async () => {
+    const first = await load();
+    const created = first.insertContact({ name: "Alice", company: null, email: null, phone: null });
+    const updated = first.updateContact(created.id, { name: "Alice Martin", company: "Acme", email: null, phone: null });
+
+    vi.resetModules();
+    const second = await load();
+
+    expect(second.findContactById(created.id)).toEqual(updated);
+  });
 });

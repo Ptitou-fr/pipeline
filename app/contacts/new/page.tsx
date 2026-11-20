@@ -1,5 +1,6 @@
 // Route /contacts/new : formulaire d'ajout d'un contact.
 import Link from "next/link";
+import { addContact } from "@/app/actions";
 import { ContactForm } from "@/components/contact-form";
 import { Button } from "@/components/ui/button";
 import { MAX_LENGTH } from "@/services/contacts";
@@ -13,7 +14,7 @@ export default function NewContactPage() {
           Retour à la liste
         </Button>
       </header>
-      <ContactForm limits={MAX_LENGTH} />
+      <ContactForm action={addContact} limits={MAX_LENGTH} submitLabel="Ajouter le contact" />
     </main>
   );
 }

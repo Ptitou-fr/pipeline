@@ -1,5 +1,7 @@
 // Couche présentation : affiche la liste reçue, dans l'ordre donné par le service.
+import Link from "next/link";
 import type { Contact } from "@/services/contacts";
+import { Button } from "@/components/ui/button";
 
 export function ContactList({ contacts }: { contacts: Contact[] }) {
   if (contacts.length === 0) {
@@ -15,16 +17,21 @@ export function ContactList({ contacts }: { contacts: Contact[] }) {
       {contacts.map((contact) => (
         <li
           key={contact.id}
-          className="flex flex-col gap-1 rounded-xl border border-border bg-card p-4 text-card-foreground"
+          className="flex items-start justify-between gap-4 rounded-xl border border-border bg-card p-4 text-card-foreground"
         >
-          <span className="font-bold">{contact.name}</span>
-          {contact.company && <span className="text-sm text-muted-foreground">{contact.company}</span>}
-          {(contact.email || contact.phone) && (
-            <span className="flex flex-wrap gap-x-4 font-mono text-xs text-muted-foreground">
-              {contact.email && <span>{contact.email}</span>}
-              {contact.phone && <span>{contact.phone}</span>}
-            </span>
-          )}
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="font-bold">{contact.name}</span>
+            {contact.company && <span className="text-sm text-muted-foreground">{contact.company}</span>}
+            {(contact.email || contact.phone) && (
+              <span className="flex flex-wrap gap-x-4 font-mono text-xs text-muted-foreground">
+                {contact.email && <span>{contact.email}</span>}
+                {contact.phone && <span>{contact.phone}</span>}
+              </span>
+            )}
+          </div>
+          <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/contacts/${contact.id}/edit`} />}>
+            Modifier
+          </Button>
         </li>
       ))}
     </ul>
