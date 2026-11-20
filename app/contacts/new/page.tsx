@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { ContactForm } from "@/components/contact-form";
 import { Button } from "@/components/ui/button";
+import { MAX_LENGTH } from "@/services/contacts";
 
 export default function NewContactPage() {
   return (
@@ -12,7 +13,7 @@ export default function NewContactPage() {
           Retour à la liste
         </Button>
       </header>
-      <ContactForm />
+      <ContactForm limits={MAX_LENGTH} />
     </main>
   );
 }

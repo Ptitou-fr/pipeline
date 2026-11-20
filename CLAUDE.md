@@ -27,8 +27,8 @@ en anglais.
 ## État
 
 Lot 1 fait (voir `lots.md`) : `/` liste les contacts triés par nom,
-`/contacts/new` les ajoute (validation et doublons décidés par
-`services/contacts.ts`). Base SQLite par `node:sqlite` (Node 24) dans
+`/contacts/new` les ajoute (validation par schéma Zod et doublons décidés
+par `services/contacts.ts`, longueurs maximales dans `MAX_LENGTH`). Base SQLite par `node:sqlite` (Node 24) dans
 `.data/pipeline.db`, ignoré par git ; seul `data/contacts.ts` l'importe.
 
 ## Couches
