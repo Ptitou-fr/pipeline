@@ -28,10 +28,10 @@ dans la base locale.
 
 **Critères d'acceptation**
 
-- [ ] Étant donné aucun contact, quand j'ouvre la liste, alors je vois un état vide.
-- [ ] Étant donné le formulaire rempli correctement, quand je valide, alors le contact apparaît dans la liste.
-- [ ] Étant donné un nom vide ou un e-mail mal formé, quand je valide, alors aucun contact n'est créé et je vois ce qui ne va pas.
-- [ ] Étant donné un contact ajouté, quand je redémarre le serveur, alors il est toujours dans la liste.
+- [x] Étant donné aucun contact, quand j'ouvre la liste, alors je vois un état vide.
+- [x] Étant donné le formulaire rempli correctement, quand je valide, alors le contact apparaît dans la liste.
+- [x] Étant donné un nom vide ou un e-mail mal formé, quand je valide, alors aucun contact n'est créé et je vois ce qui ne va pas.
+- [x] Étant donné un contact ajouté, quand je redémarre le serveur, alors il est toujours dans la liste.
 
 ## Lot 2 · Modifier un contact
 

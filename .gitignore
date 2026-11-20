@@ -46,3 +46,6 @@ next-env.d.ts
 *.sqlite
 *.sqlite3
 *.sqlite-*
+
+# base locale (lot 1)
+/.data/

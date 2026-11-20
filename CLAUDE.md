@@ -26,9 +26,10 @@ en anglais.
 
 ## État
 
-Les trois couches existent, chacune avec un exemple vide (`example.ts(x)`) et
-son test ; aucune fonctionnalité, aucune base. `app/page.tsx` et les
-métadonnées de `app/layout.tsx` (dont `lang="en"`) sont encore ceux du modèle.
+Lot 1 fait (voir `lots.md`) : `/` liste les contacts triés par nom,
+`/contacts/new` les ajoute (validation et doublons décidés par
+`services/contacts.ts`). Base SQLite par `node:sqlite` (Node 24) dans
+`.data/pipeline.db`, ignoré par git ; seul `data/contacts.ts` l'importe.
 
 ## Couches
 
@@ -36,15 +37,16 @@ métadonnées de `app/layout.tsx` (dont `lang="en"`) sont encore ceux du modèle
 |---|---|---|
 | Présentation | `app/`, `components/` | `services/` |
 | Service | `services/` | `data/` |
-| Données | `data/` | la base (pilote pas encore choisi) |
+| Données | `data/` | la base (`node:sqlite`) |
 
 Vocabulaire : toujours présentation, service, données, comme dans
 `INTENT.md`. Une règle par couche dans `.claude/rules/` (`presentation.md`,
 `service.md`, `data.md`), chargée quand on touche ses dossiers.
 
 `pnpm lint` fait échouer tout import contraire (règle `no-restricted-imports`
-dans `eslint.config.mjs`, alias `@/` et chemins relatifs). Quand le pilote de la
-base sera choisi, l'interdire hors de `data/` dans cette même règle.
+dans `eslint.config.mjs`, alias `@/` et chemins relatifs), y compris celui de
+`node:sqlite` hors de `data/`. Changer de pilote : mettre à jour `DRIVER` dans
+cette même règle.
 
 ## Commandes
 
@@ -58,6 +60,8 @@ pnpm uniquement (`packageManager: pnpm@10.32.1`).
 Tests : dans un dossier `__tests__/` à l'intérieur de chaque couche, nommés
 `*.test.ts(x)`. `vitest.config.mts` déclare l'alias `@` et l'environnement
 `node` ; les composants se testent par `renderToStaticMarkup` (pas de jsdom).
+Les tests de `data/` ouvrent un fichier SQLite temporaire via
+`PIPELINE_DB_PATH`, jamais `.data/pipeline.db`.
 
 ## Règles transverses
 
