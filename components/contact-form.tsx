@@ -15,10 +15,12 @@ export function contactErrorMessage(field: keyof ContactFormValues, error: Conta
   if (!error) return undefined;
   if (error === "required") return "Le nom est obligatoire.";
   if (error === "too_long") return `${limits[field]} caractères au plus.`;
-  return field === "email" ? "Le format de l’e-mail n’est pas valide." : "Cette valeur n’est pas valide.";
+  if (field === "email") return "Le format de l’e-mail n’est pas valide.";
+  if (field === "followUpDate") return "Cette date n’est pas valide.";
+  return "Cette valeur n’est pas valide.";
 }
 
-const EMPTY: ContactFormValues = { name: "", company: "", email: "", phone: "" };
+const EMPTY: ContactFormValues = { name: "", company: "", email: "", phone: "", followUpDate: "" };
 
 function Field({
   name,
@@ -84,6 +86,13 @@ export function ContactForm({ action, limits, submitLabel, initialValues = EMPTY
         error={error("email")}
       />
       <Field name="phone" label="Téléphone (facultatif)" type="tel" defaultValue={values.phone} error={error("phone")} />
+      <Field
+        name="followUpDate"
+        label="Prochaine relance (facultatif)"
+        type="date"
+        defaultValue={values.followUpDate}
+        error={error("followUpDate")}
+      />
 
       {state.duplicate ? (
         <div role="alert" className="flex flex-col gap-3 rounded-xl border border-border bg-muted p-4">

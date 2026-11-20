@@ -105,10 +105,10 @@ relancer aujourd'hui. Les autres n'y sont pas.
 
 **Critères d'acceptation**
 
-- [ ] Étant donné des contacts dont la date est aujourd'hui ou passée, quand j'ouvre la vue, alors je vois exactement ceux-là.
-- [ ] Étant donné aucun contact à relancer, quand j'ouvre la vue, alors je vois un état vide.
-- [ ] Étant donné un contact à relancer demain, quand j'ouvre la vue, alors il n'y est pas aujourd'hui et il y sera demain.
-- [ ] Étant donné un contact à « Gagné » ou « Perdu » dont la date est passée, quand j'ouvre la vue, alors il n'y est pas.
+- [x] Étant donné des contacts dont la date est aujourd'hui ou passée, quand j'ouvre la vue, alors je vois exactement ceux-là.
+- [x] Étant donné aucun contact à relancer, quand j'ouvre la vue, alors je vois un état vide.
+- [x] Étant donné un contact à relancer demain, quand j'ouvre la vue, alors il n'y est pas aujourd'hui et il y sera demain.
+- [x] Étant donné un contact à « Gagné » ou « Perdu » dont la date est passée, quand j'ouvre la vue, alors il n'y est pas.
 
 ## Commun à tous les lots
 

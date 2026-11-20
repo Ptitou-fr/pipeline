@@ -13,8 +13,8 @@ describe("components/contact-list", () => {
     const html = renderToStaticMarkup(
       <ContactList
         contacts={[
-          { id: 1, name: "Alice Martin", company: "Acme", email: "alice@acme.fr", phone: "06 12 34 56 78", stage: "to_contact" },
-          { id: 2, name: "Bob", company: null, email: null, phone: null, stage: "to_contact" },
+          { id: 1, name: "Alice Martin", company: "Acme", email: "alice@acme.fr", phone: "06 12 34 56 78", stage: "to_contact", followUpDate: null },
+          { id: 2, name: "Bob", company: null, email: null, phone: null, stage: "to_contact", followUpDate: null },
         ]}
       />,
     );
@@ -30,8 +30,8 @@ describe("components/contact-list", () => {
     const html = renderToStaticMarkup(
       <ContactList
         contacts={[
-          { id: 1, name: "Alice", company: null, email: null, phone: null, stage: "to_contact" },
-          { id: 2, name: "Bob", company: null, email: null, phone: null, stage: "to_contact" },
+          { id: 1, name: "Alice", company: null, email: null, phone: null, stage: "to_contact", followUpDate: null },
+          { id: 2, name: "Bob", company: null, email: null, phone: null, stage: "to_contact", followUpDate: null },
         ]}
       />,
     );
@@ -52,8 +52,8 @@ describe("components/contact-list", () => {
     const html = renderToStaticMarkup(
       <ContactList
         contacts={[
-          { id: 1, name: "Alice", company: null, email: null, phone: null, stage: "contacted" },
-          { id: 2, name: "Bob", company: null, email: null, phone: null, stage: "won" },
+          { id: 1, name: "Alice", company: null, email: null, phone: null, stage: "contacted", followUpDate: null },
+          { id: 2, name: "Bob", company: null, email: null, phone: null, stage: "won", followUpDate: null },
         ]}
       />,
     );
@@ -62,5 +62,19 @@ describe("components/contact-list", () => {
     expect(html).toContain("Contacté");
     expect(html).toContain('aria-label="Étape de Bob"');
     expect(html).toContain("Gagné");
+  });
+
+  it("affiche la date de prochaine relance quand elle est renseignée", () => {
+    const html = renderToStaticMarkup(
+      <ContactList contacts={[{ id: 1, name: "Alice", company: null, email: null, phone: null, stage: "to_contact", followUpDate: "2026-12-01" }]} />,
+    );
+
+    expect(html).toContain("Relance le 01/12/2026");
+  });
+
+  it("affiche le message vide fourni par la page", () => {
+    const html = renderToStaticMarkup(<ContactList contacts={[]} emptyMessage="Personne à relancer aujourd’hui." />);
+
+    expect(html).toContain("Personne à relancer aujourd’hui.");
   });
 });

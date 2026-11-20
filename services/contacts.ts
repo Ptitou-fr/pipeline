@@ -9,14 +9,14 @@ import {
   type ContactFields,
   type ContactRecord,
 } from "@/data/contacts";
-import { INITIAL_STAGE, stageSchema } from "@/services/stages";
+import { INITIAL_STAGE, stageSchema, type Stage } from "@/services/stages";
 
 export type Contact = ContactRecord;
 
 // Ce qu'envoie l'appelant (formulaire…), tel quel : le schéma ci-dessous décide de ce qui est accepté.
 export type ContactInput = Record<string, unknown>;
 
-type Field = "name" | "company" | "email" | "phone";
+type Field = "name" | "company" | "email" | "phone" | "followUpDate";
 export type ContactError = "required" | "invalid" | "too_long";
 export type ContactErrors = Partial<Record<Field, ContactError>>;
 
@@ -32,9 +32,12 @@ export type UpdateContactResult =
   | { status: "not_found" };
 
 // Longueurs maximales, comptées après retrait des espaces autour (254 : limite pratique d'une adresse e-mail).
-export const MAX_LENGTH = { name: 100, company: 100, email: 254, phone: 30 } as const;
+export const MAX_LENGTH = { name: 100, company: 100, email: 254, phone: 30, followUpDate: 10 } as const;
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Date au format AAAA-MM-JJ, jour existant (pas de 30 février).
+const isoDate = z.iso.date();
 
 // Le message de chaque erreur Zod est directement le code renvoyé à la présentation.
 const text = (max: number) => z.string({ error: "invalid" }).trim().max(max, { error: "too_long" });
@@ -50,6 +53,8 @@ const contactSchema = z.object({
   company: optional(text(MAX_LENGTH.company)),
   email: optional(text(MAX_LENGTH.email).refine((v) => v === "" || EMAIL.test(v), { error: "invalid" })),
   phone: optional(text(MAX_LENGTH.phone)),
+  // Date de prochaine relance (lot 5) : AAAA-MM-JJ, date réelle.
+  followUpDate: optional(text(MAX_LENGTH.followUpDate).refine((v) => v === "" || isoDate.safeParse(v).success, { error: "invalid" })),
 });
 
 // Id venu de l'extérieur (URL…) : entier strictement positif.
@@ -170,4 +175,29 @@ export function changeStage(id: unknown, stage: unknown): ChangeStageResult {
 
   const contact = updateContactStage(contactId, parsed.data);
   return contact ? { status: "updated", contact } : { status: "not_found" };
+}
+
+// ---------- Lot 5 : qui relancer aujourd'hui
+
+// Un contact à ces étapes n'est plus à relancer, quelle que soit sa date.
+const CLOSED_STAGES: readonly Stage[] = ["won", "lost"];
+
+export type FollowUpsResult = { status: "ok"; contacts: Contact[] } | { status: "invalid" };
+
+// Un contact est à relancer si sa date de relance est aujourd'hui ou passée (une relance en retard
+// reste visible tant que la date ne change pas) et s'il n'est ni gagné ni perdu.
+// `today` (AAAA-MM-JJ) est reçu en paramètre pour que la règle soit testable.
+export function listFollowUps(today: unknown): FollowUpsResult {
+  const parsed = isoDate.safeParse(today);
+  if (!parsed.success) return { status: "invalid" };
+
+  const isDue = (c: Contact) =>
+    c.followUpDate !== null && c.followUpDate <= parsed.data && !CLOSED_STAGES.some((stage) => stage === c.stage);
+  return { status: "ok", contacts: listContacts().filter(isDue) };
+}
+
+// « Aujourd'hui » suit l'heure locale de la machine.
+export function localToday(now: Date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }

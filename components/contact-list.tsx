@@ -4,12 +4,16 @@ import type { Contact } from "@/services/contacts";
 import { StageSelect } from "@/components/stage-select";
 import { Button } from "@/components/ui/button";
 
+// AAAA-MM-JJ → JJ/MM/AAAA, pour l'affichage.
+const frenchDate = (date: string) => date.split("-").reverse().join("/");
+
 // `query` : le texte de la recherche en cours, tel que renvoyé par le service (vide sans recherche).
-export function ContactList({ contacts, query = "" }: { contacts: Contact[]; query?: string }) {
+// `emptyMessage` : message d'une liste vide propre à la page (ex. la vue « À relancer »).
+export function ContactList({ contacts, query = "", emptyMessage }: { contacts: Contact[]; query?: string; emptyMessage?: string }) {
   if (contacts.length === 0) {
     return (
       <p className="rounded-xl border border-dashed border-border p-8 text-center text-muted-foreground">
-        {query ? `Aucun résultat pour « ${query} ».` : "Aucun contact pour l’instant."}
+        {query ? `Aucun résultat pour « ${query} ».` : (emptyMessage ?? "Aucun contact pour l’instant.")}
       </p>
     );
   }
@@ -29,6 +33,9 @@ export function ContactList({ contacts, query = "" }: { contacts: Contact[]; que
                 {contact.email && <span>{contact.email}</span>}
                 {contact.phone && <span>{contact.phone}</span>}
               </span>
+            )}
+            {contact.followUpDate && (
+              <span className="text-xs font-medium text-primary">Relance le {frenchDate(contact.followUpDate)}</span>
             )}
           </div>
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">

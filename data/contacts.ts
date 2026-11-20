@@ -10,6 +10,8 @@ export type ContactRecord = {
   company: string | null;
   email: string | null;
   phone: string | null;
+  // Date de prochaine relance (lot 5), au format AAAA-MM-JJ.
+  followUpDate: string | null;
   stage: string;
 };
 
@@ -17,7 +19,7 @@ export type NewContactRecord = Omit<ContactRecord, "id">;
 // Informations modifiables par le formulaire : l'étape change à part (updateContactStage).
 export type ContactFields = Omit<ContactRecord, "id" | "stage">;
 
-const COLUMNS = "id, name, company, email, phone, stage";
+const COLUMNS = "id, name, company, email, phone, follow_up_date, stage";
 
 let db: DatabaseSync | undefined;
 
@@ -33,7 +35,8 @@ function database(): DatabaseSync {
       company TEXT,
       email TEXT,
       phone TEXT,
-      stage TEXT NOT NULL DEFAULT 'to_contact'
+      stage TEXT NOT NULL DEFAULT 'to_contact',
+      follow_up_date TEXT
     )`);
     migrate(db);
   }
@@ -42,9 +45,11 @@ function database(): DatabaseSync {
 
 // Ajoute les colonnes apparues après la création d'une base existante.
 // Lot 4 : les contacts déjà enregistrés reçoivent l'étape de départ, 'to_contact'.
+// Lot 5 : ils n'ont pas de date de relance.
 function migrate(db: DatabaseSync) {
   const columns = new Set(db.prepare("PRAGMA table_info(contacts)").all().map((column) => column.name));
   if (!columns.has("stage")) db.exec("ALTER TABLE contacts ADD COLUMN stage TEXT NOT NULL DEFAULT 'to_contact'");
+  if (!columns.has("follow_up_date")) db.exec("ALTER TABLE contacts ADD COLUMN follow_up_date TEXT");
 }
 
 const toRecord = (row: Record<string, unknown>): ContactRecord => ({
@@ -53,13 +58,16 @@ const toRecord = (row: Record<string, unknown>): ContactRecord => ({
   company: row.company === null ? null : String(row.company),
   email: row.email === null ? null : String(row.email),
   phone: row.phone === null ? null : String(row.phone),
+  followUpDate: row.follow_up_date === null ? null : String(row.follow_up_date),
   stage: String(row.stage),
 });
 
 export function insertContact(fields: NewContactRecord): ContactRecord {
   const row = database()
-    .prepare(`INSERT INTO contacts (name, company, email, phone, stage) VALUES (?, ?, ?, ?, ?) RETURNING ${COLUMNS}`)
-    .get(fields.name, fields.company, fields.email, fields.phone, fields.stage);
+    .prepare(
+      `INSERT INTO contacts (name, company, email, phone, follow_up_date, stage) VALUES (?, ?, ?, ?, ?, ?) RETURNING ${COLUMNS}`,
+    )
+    .get(fields.name, fields.company, fields.email, fields.phone, fields.followUpDate, fields.stage);
   return toRecord(row as Record<string, unknown>);
 }
 
@@ -78,8 +86,10 @@ export function findContactById(id: number): ContactRecord | null {
 // Renvoie null si aucun contact ne porte cet id.
 export function updateContact(id: number, fields: ContactFields): ContactRecord | null {
   const row = database()
-    .prepare(`UPDATE contacts SET name = ?, company = ?, email = ?, phone = ? WHERE id = ? RETURNING ${COLUMNS}`)
-    .get(fields.name, fields.company, fields.email, fields.phone, id);
+    .prepare(
+      `UPDATE contacts SET name = ?, company = ?, email = ?, phone = ?, follow_up_date = ? WHERE id = ? RETURNING ${COLUMNS}`,
+    )
+    .get(fields.name, fields.company, fields.email, fields.phone, fields.followUpDate, id);
   return row ? toRecord(row as Record<string, unknown>) : null;
 }
 

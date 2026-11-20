@@ -2,9 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ContactForm, contactErrorMessage } from "@/components/contact-form";
 
-const limits = { name: 100, company: 100, email: 254, phone: 30 };
+const limits = { name: 100, company: 100, email: 254, phone: 30, followUpDate: 10 };
 const action = vi.fn(async (prev) => prev);
-const alice = { name: "Alice Martin", company: "Acme", email: "alice@acme.fr", phone: "06 12 34 56 78" };
+const alice = { name: "Alice Martin", company: "Acme", email: "alice@acme.fr", phone: "06 12 34 56 78", followUpDate: "2026-12-01" };
 
 describe("components/contact-form", () => {
   it("montre les valeurs actuelles du contact en modification", () => {
@@ -26,6 +26,13 @@ describe("components/contact-form", () => {
     expect(html).toMatch(/<a[^>]*href="\/"[^>]*>Annuler<\/a>/);
     expect(html.match(/type="submit"/g)).toHaveLength(1);
     expect(action).not.toHaveBeenCalled();
+  });
+
+  it("propose un champ date pour la prochaine relance", () => {
+    const html = renderToStaticMarkup(<ContactForm action={action} limits={limits} submitLabel="Ajouter le contact" />);
+
+    expect(html).toMatch(/<input[^>]*type="date"[^>]*name="followUpDate"|<input[^>]*name="followUpDate"[^>]*type="date"/);
+    expect(html).toContain("Prochaine relance");
   });
 
   it("démarre vide et sans « Annuler » pour un ajout", () => {
@@ -51,5 +58,9 @@ describe("contactErrorMessage", () => {
 
   it("ne dit rien sans erreur", () => {
     expect(contactErrorMessage("name", undefined, limits)).toBeUndefined();
+  });
+
+  it("signale une date de relance invalide", () => {
+    expect(contactErrorMessage("followUpDate", "invalid", limits)).toBe("Cette date n’est pas valide.");
   });
 });
