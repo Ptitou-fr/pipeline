@@ -57,6 +57,47 @@ describe("createContact", () => {
     expect(createContact({ name: "", email: "x" })).toEqual({ status: "invalid", errors: { name: "required", email: "invalid" } });
   });
 
+  it("refuse un nom absent", () => {
+    expect(createContact({})).toEqual({ status: "invalid", errors: { name: "required" } });
+    expect(insertContact).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["name", 42],
+    ["company", new File(["x"], "x.txt")],
+    ["email", ["a@b.fr"]],
+    ["phone", { n: 1 }],
+  ])("refuse une valeur non textuelle pour %s et ne crée rien", (field, value) => {
+    expect(createContact({ name: "Alice", [field]: value })).toEqual({ status: "invalid", errors: { [field]: "invalid" } });
+    expect(insertContact).not.toHaveBeenCalled();
+  });
+
+  // Limites : nom 100, entreprise 100, e-mail 254, téléphone 30 caractères, comptés après trim.
+  const email = (length: number) => `${"a".repeat(length - "@acme.fr".length)}@acme.fr`;
+
+  it.each([
+    ["name", "n".repeat(100)],
+    ["company", "c".repeat(100)],
+    ["email", email(254)],
+    ["phone", "0".repeat(30)],
+  ])("accepte %s à sa longueur maximale", (field, value) => {
+    expect(createContact({ name: "Alice", [field]: value }).status).toBe("created");
+  });
+
+  it.each([
+    ["name", "n".repeat(101)],
+    ["company", "c".repeat(101)],
+    ["email", email(255)],
+    ["phone", "0".repeat(31)],
+  ])("refuse %s trop long et ne crée rien", (field, value) => {
+    expect(createContact({ name: "Alice", [field]: value })).toEqual({ status: "invalid", errors: { [field]: "too_long" } });
+    expect(insertContact).not.toHaveBeenCalled();
+  });
+
+  it("compte la longueur après avoir retiré les espaces autour", () => {
+    expect(createContact({ name: `  ${"n".repeat(100)}  ` }).status).toBe("created");
+  });
+
   it("demande confirmation pour un nom déjà pris, sans tenir compte de la casse, des accents ni des espaces", () => {
     vi.mocked(findAllContacts).mockReturnValue([record(7, "Émile Dupont")]);
 
