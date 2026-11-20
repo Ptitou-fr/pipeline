@@ -22,6 +22,7 @@ async function EditContact({ params }: { params: Promise<{ id: string }> }) {
         company: contact.company ?? "",
         email: contact.email ?? "",
         phone: contact.phone ?? "",
+        followUpDate: contact.followUpDate ?? "",
       }}
     />
   );

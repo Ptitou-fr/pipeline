@@ -65,10 +65,10 @@ liste complète revient.
 
 **Critères d'acceptation**
 
-- [ ] Étant donné les contacts « Dupont », « Éts Dupuis » et « Martin », quand je cherche « dup », alors seuls « Dupont » et « Éts Dupuis » s'affichent.
-- [ ] Étant donné un texte en majuscules ou sans accent, quand je cherche, alors les correspondances sont les mêmes.
-- [ ] Étant donné aucun contact correspondant, quand je cherche, alors je vois un état « aucun résultat ».
-- [ ] Étant donné une recherche en cours, quand je vide le champ, alors la liste complète revient.
+- [x] Étant donné les contacts « Dupont », « Éts Dupuis » et « Martin », quand je cherche « dup », alors seuls « Dupont » et « Éts Dupuis » s'affichent.
+- [x] Étant donné un texte en majuscules ou sans accent, quand je cherche, alors les correspondances sont les mêmes.
+- [x] Étant donné aucun contact correspondant, quand je cherche, alors je vois un état « aucun résultat ».
+- [x] Étant donné une recherche en cours, quand je vide le champ, alors la liste complète revient.
 
 ## Lot 4 · Faire avancer un contact dans le pipeline
 
@@ -83,10 +83,10 @@ liste affiche aussitôt sa nouvelle étape. Le changement est enregistré.
 
 **Critères d'acceptation**
 
-- [ ] Étant donné un nouveau contact, quand il est créé, alors il est à « À contacter ».
-- [ ] Étant donné un contact à une étape, quand je choisis une autre des cinq étapes, alors la liste affiche sa nouvelle étape.
-- [ ] Étant donné une étape changée, quand je redémarre le serveur, alors l'étape est conservée.
-- [ ] Étant donné une étape hors des cinq, quand le service la reçoit, alors il la refuse, et ce cas est testé.
+- [x] Étant donné un nouveau contact, quand il est créé, alors il est à « À contacter ».
+- [x] Étant donné un contact à une étape, quand je choisis une autre des cinq étapes, alors la liste affiche sa nouvelle étape.
+- [x] Étant donné une étape changée, quand je redémarre le serveur, alors l'étape est conservée.
+- [x] Étant donné une étape hors des cinq, quand le service la reçoit, alors il la refuse, et ce cas est testé.
 
 ## Lot 5 · Voir qui relancer aujourd'hui
 
@@ -105,10 +105,10 @@ relancer aujourd'hui. Les autres n'y sont pas.
 
 **Critères d'acceptation**
 
-- [ ] Étant donné des contacts dont la date est aujourd'hui ou passée, quand j'ouvre la vue, alors je vois exactement ceux-là.
-- [ ] Étant donné aucun contact à relancer, quand j'ouvre la vue, alors je vois un état vide.
-- [ ] Étant donné un contact à relancer demain, quand j'ouvre la vue, alors il n'y est pas aujourd'hui et il y sera demain.
-- [ ] Étant donné un contact à « Gagné » ou « Perdu » dont la date est passée, quand j'ouvre la vue, alors il n'y est pas.
+- [x] Étant donné des contacts dont la date est aujourd'hui ou passée, quand j'ouvre la vue, alors je vois exactement ceux-là.
+- [x] Étant donné aucun contact à relancer, quand j'ouvre la vue, alors je vois un état vide.
+- [x] Étant donné un contact à relancer demain, quand j'ouvre la vue, alors il n'y est pas aujourd'hui et il y sera demain.
+- [x] Étant donné un contact à « Gagné » ou « Perdu » dont la date est passée, quand j'ouvre la vue, alors il n'y est pas.
 
 ## Commun à tous les lots
 
