@@ -3,11 +3,12 @@ import Link from "next/link";
 import type { Contact } from "@/services/contacts";
 import { Button } from "@/components/ui/button";
 
-export function ContactList({ contacts }: { contacts: Contact[] }) {
+// `query` : le texte de la recherche en cours, tel que renvoyé par le service (vide sans recherche).
+export function ContactList({ contacts, query = "" }: { contacts: Contact[]; query?: string }) {
   if (contacts.length === 0) {
     return (
       <p className="rounded-xl border border-dashed border-border p-8 text-center text-muted-foreground">
-        Aucun contact pour l’instant.
+        {query ? `Aucun résultat pour « ${query} ».` : "Aucun contact pour l’instant."}
       </p>
     );
   }

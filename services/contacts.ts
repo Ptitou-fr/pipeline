@@ -61,8 +61,39 @@ type ContactOptions = { confirmDuplicate?: unknown };
 // Comparaison des noms insensible à la casse et aux accents, pour le tri comme pour les doublons.
 const collator = new Intl.Collator("fr", { sensitivity: "base" });
 
+const byName = (a: Contact, b: Contact) => collator.compare(a.name, b.name) || a.id - b.id;
+
 export function listContacts(): Contact[] {
-  return findAllContacts().sort((a, b) => collator.compare(a.name, b.name) || a.id - b.id);
+  return findAllContacts().sort(byName);
+}
+
+// Recherche (lot 3) : texte contenu dans le nom ou l'entreprise, sans tenir compte de la casse ni des accents.
+export const SEARCH_MAX_LENGTH = 100;
+
+const searchSchema = z
+  .string({ error: "invalid" })
+  .trim()
+  .max(SEARCH_MAX_LENGTH, { error: "too_long" })
+  .nullish()
+  .transform((v) => v ?? "");
+
+export type SearchContactsResult =
+  | { status: "ok"; contacts: Contact[]; query: string }
+  | { status: "invalid"; error: "invalid" | "too_long" };
+
+const fold = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+
+export function searchContacts(query: unknown): SearchContactsResult {
+  const parsed = searchSchema.safeParse(query);
+  if (!parsed.success) return { status: "invalid", error: parsed.error.issues[0].message as "invalid" | "too_long" };
+
+  const text = parsed.data;
+  const contacts = listContacts();
+  if (!text) return { status: "ok", contacts, query: "" };
+
+  const needle = fold(text);
+  const matches = (value: string | null) => value !== null && fold(value).includes(needle);
+  return { status: "ok", contacts: contacts.filter((c) => matches(c.name) || matches(c.company)), query: text };
 }
 
 function parseContact(input: ContactInput): { fields: NewContactRecord } | { errors: ContactErrors } {

@@ -26,7 +26,8 @@ en anglais.
 
 ## État
 
-Lots 1 et 2 faits (voir `lots.md`) : `/` liste les contacts triés par nom,
+Lots 1 à 3 faits (voir `lots.md`) : `/` liste les contacts triés par nom,
+filtrés par `?q=` (`searchContacts`, nom ou entreprise, sans casse ni accents),
 `/contacts/new` les ajoute, `/contacts/[id]/edit` les modifie dans le même
 formulaire (`components/contact-form.tsx`). Validation par schéma Zod et
 doublons décidés par `services/contacts.ts`, longueurs maximales dans

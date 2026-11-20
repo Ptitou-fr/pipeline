@@ -65,10 +65,10 @@ liste complète revient.
 
 **Critères d'acceptation**
 
-- [ ] Étant donné les contacts « Dupont », « Éts Dupuis » et « Martin », quand je cherche « dup », alors seuls « Dupont » et « Éts Dupuis » s'affichent.
-- [ ] Étant donné un texte en majuscules ou sans accent, quand je cherche, alors les correspondances sont les mêmes.
-- [ ] Étant donné aucun contact correspondant, quand je cherche, alors je vois un état « aucun résultat ».
-- [ ] Étant donné une recherche en cours, quand je vide le champ, alors la liste complète revient.
+- [x] Étant donné les contacts « Dupont », « Éts Dupuis » et « Martin », quand je cherche « dup », alors seuls « Dupont » et « Éts Dupuis » s'affichent.
+- [x] Étant donné un texte en majuscules ou sans accent, quand je cherche, alors les correspondances sont les mêmes.
+- [x] Étant donné aucun contact correspondant, quand je cherche, alors je vois un état « aucun résultat ».
+- [x] Étant donné une recherche en cours, quand je vide le champ, alors la liste complète revient.
 
 ## Lot 4 · Faire avancer un contact dans le pipeline
 

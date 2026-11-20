@@ -6,7 +6,7 @@ import {
   updateContact as updateContactRecord,
   type ContactRecord,
 } from "@/data/contacts";
-import { createContact, getContact, listContacts, updateContact } from "@/services/contacts";
+import { createContact, getContact, listContacts, searchContacts, updateContact } from "@/services/contacts";
 
 // On teste les règles, pas la base : la couche données est simulée.
 vi.mock("@/data/contacts", () => ({
@@ -249,5 +249,68 @@ describe("updateContact", () => {
     vi.mocked(findAllContacts).mockReturnValue([record(3, "Alice")]);
 
     expect(updateContact("3", { name: "ALICE", company: "Acme" }).status).toBe("updated");
+  });
+});
+
+describe("searchContacts", () => {
+  const contacts = [
+    record(1, "Martin"),
+    { ...record(2, "Éts Dupuis"), company: "Bâtiment" },
+    record(3, "Dupont"),
+    { ...record(4, "Bernard"), company: "Dupré SA" },
+  ];
+  const names = (query: unknown) => {
+    const result = searchContacts(query);
+    return result.status === "ok" ? result.contacts.map((c) => c.name) : result;
+  };
+
+  beforeEach(() => {
+    vi.mocked(findAllContacts).mockReturnValue(contacts);
+  });
+
+  it("ne garde que les contacts dont le nom contient le texte (« dup »), triés par nom", () => {
+    vi.mocked(findAllContacts).mockReturnValue([record(1, "Martin"), record(2, "Éts Dupuis"), record(3, "Dupont")]);
+
+    expect(names("dup")).toEqual(["Dupont", "Éts Dupuis"]);
+  });
+
+  it("cherche aussi dans l'entreprise", () => {
+    expect(names("dupré")).toEqual(["Bernard"]);
+    expect(names("batiment")).toEqual(["Éts Dupuis"]);
+  });
+
+  it.each(["DUP", "Dup", "dûp"])("ignore les majuscules et les accents du texte cherché (%j)", (query) => {
+    expect(names(query)).toEqual(names("dup"));
+  });
+
+  it.each(["ets", "ETS", "éts"])("ignore les accents du contact (%j trouve « Éts Dupuis »)", (query) => {
+    expect(names(query)).toEqual(["Éts Dupuis"]);
+  });
+
+  it("renvoie une liste vide quand rien ne correspond", () => {
+    expect(searchContacts("zzz")).toEqual({ status: "ok", contacts: [], query: "zzz" });
+  });
+
+  it.each([undefined, null, "", "   "])("renvoie la liste complète pour une recherche vide (%j)", (query) => {
+    expect(searchContacts(query)).toEqual({ status: "ok", contacts: listContacts(), query: "" });
+  });
+
+  it("renvoie le texte cherché sans les espaces autour", () => {
+    expect(searchContacts("  dup ")).toMatchObject({ status: "ok", query: "dup" });
+  });
+
+  it.each([42, ["dup"], { q: "dup" }])("refuse un texte de mauvais type (%j) sans interroger la base", (query) => {
+    vi.mocked(findAllContacts).mockClear();
+
+    expect(searchContacts(query)).toEqual({ status: "invalid", error: "invalid" });
+    expect(findAllContacts).not.toHaveBeenCalled();
+  });
+
+  it("refuse un texte trop long (plus de 100 caractères) sans interroger la base", () => {
+    vi.mocked(findAllContacts).mockClear();
+
+    expect(searchContacts("d".repeat(101))).toEqual({ status: "invalid", error: "too_long" });
+    expect(findAllContacts).not.toHaveBeenCalled();
+    expect(searchContacts("d".repeat(100)).status).toBe("ok");
   });
 });

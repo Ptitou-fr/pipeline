@@ -40,4 +40,11 @@ describe("components/contact-list", () => {
     expect(html).toContain('href="/contacts/2/edit"');
     expect(html.match(/Modifier/g)).toHaveLength(2);
   });
+
+  it("affiche « aucun résultat » quand une recherche ne trouve rien", () => {
+    const html = renderToStaticMarkup(<ContactList contacts={[]} query="zzz" />);
+
+    expect(html).toContain("Aucun résultat pour « zzz »");
+    expect(html).not.toContain("Aucun contact pour l’instant");
+  });
 });
