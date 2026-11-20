@@ -39,7 +39,8 @@ export function ContactList({ contacts, query = "", emptyMessage }: { contacts: 
             )}
           </div>
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-            <StageSelect contactId={contact.id} contactName={contact.name} stage={contact.stage} />
+            {/* Clé liée à l'étape : après rafraîchissement, le sélecteur (non contrôlé) repart de l'étape enregistrée. */}
+            <StageSelect key={contact.stage} contactId={contact.id} contactName={contact.name} stage={contact.stage} />
             <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/contacts/${contact.id}/edit`} />}>
               Modifier
             </Button>
