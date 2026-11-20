@@ -54,3 +54,16 @@ export function findAllContacts(): ContactRecord[] {
     .all()
     .map((row) => toRecord(row as Record<string, unknown>));
 }
+
+export function findContactById(id: number): ContactRecord | null {
+  const row = database().prepare("SELECT id, name, company, email, phone FROM contacts WHERE id = ?").get(id);
+  return row ? toRecord(row as Record<string, unknown>) : null;
+}
+
+// Renvoie null si aucun contact ne porte cet id.
+export function updateContact(id: number, fields: NewContactRecord): ContactRecord | null {
+  const row = database()
+    .prepare("UPDATE contacts SET name = ?, company = ?, email = ?, phone = ? WHERE id = ? RETURNING *")
+    .get(fields.name, fields.company, fields.email, fields.phone, id);
+  return row ? toRecord(row as Record<string, unknown>) : null;
+}

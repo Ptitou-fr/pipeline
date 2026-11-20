@@ -26,9 +26,11 @@ en anglais.
 
 ## État
 
-Lot 1 fait (voir `lots.md`) : `/` liste les contacts triés par nom,
-`/contacts/new` les ajoute (validation par schéma Zod et doublons décidés
-par `services/contacts.ts`, longueurs maximales dans `MAX_LENGTH`). Base SQLite par `node:sqlite` (Node 24) dans
+Lots 1 et 2 faits (voir `lots.md`) : `/` liste les contacts triés par nom,
+`/contacts/new` les ajoute, `/contacts/[id]/edit` les modifie dans le même
+formulaire (`components/contact-form.tsx`). Validation par schéma Zod et
+doublons décidés par `services/contacts.ts`, longueurs maximales dans
+`MAX_LENGTH`. Base SQLite par `node:sqlite` (Node 24) dans
 `.data/pipeline.db`, ignoré par git ; seul `data/contacts.ts` l'importe.
 
 ## Couches
