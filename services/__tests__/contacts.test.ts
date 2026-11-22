@@ -9,10 +9,13 @@ import {
 } from "@/data/contacts";
 import {
   changeStage,
+  countViews,
   createContact,
+  followUpStatus,
   getContact,
   listContacts,
   listFollowUps,
+  listPipeline,
   localToday,
   searchContacts,
   updateContact,
@@ -504,4 +507,149 @@ describe("localToday", () => {
     expect(localToday(new Date(2026, 0, 5, 23, 59))).toBe("2026-01-05");
     expect(localToday(new Date(2026, 10, 20, 0, 1))).toBe("2026-11-20");
   });
+});
+
+// ---------- Lot 6 : le pipeline par étapes
+
+describe("followUpStatus : état de la relance d'un contact (lot 6)", () => {
+  const contact = (followUpDate: string | null, stage = "to_contact") => ({ ...record(1, "Alice"), followUpDate, stage });
+  const today = "2026-11-20";
+
+  it("classe « en retard » un contact à relancer dont la date est passée", () => {
+    expect(followUpStatus(contact("2026-11-19"), today)).toBe("overdue");
+    expect(followUpStatus(contact("2026-01-02"), today)).toBe("overdue");
+  });
+
+  it("classe « aujourd'hui » un contact à relancer dont la date est aujourd'hui", () => {
+    expect(followUpStatus(contact("2026-11-20"), today)).toBe("today");
+  });
+
+  it("classe « prévue » un contact qui a une date future", () => {
+    expect(followUpStatus(contact("2026-11-21"), today)).toBe("scheduled");
+  });
+
+  it.each(["won", "lost"])("classe « prévue » un contact %s, qui n'est pas à relancer même si sa date est passée", (stage) => {
+    expect(followUpStatus(contact("2026-11-01", stage), today)).toBe("scheduled");
+    expect(followUpStatus(contact("2026-11-20", stage), today)).toBe("scheduled");
+  });
+
+  it("classe « sans relance » un contact sans date", () => {
+    expect(followUpStatus(contact(null), today)).toBe("none");
+    expect(followUpStatus(contact(null, "won"), today)).toBe("none");
+  });
+
+  it("suit la même règle que la vue « À relancer » : en retard ou aujourd'hui, exactement les contacts à relancer", () => {
+    const records = [
+      { ...record(1, "Alice"), followUpDate: "2026-11-19" },
+      { ...record(2, "Bruno"), followUpDate: "2026-11-20" },
+      { ...record(3, "Chloé"), followUpDate: "2026-11-21" },
+      { ...record(4, "David"), followUpDate: null },
+      { ...record(5, "Émile"), followUpDate: "2026-11-01", stage: "won" },
+      { ...record(6, "Fanny"), followUpDate: "2026-11-01", stage: "lost" },
+      { ...record(7, "Gaby"), followUpDate: "2026-11-02", stage: null },
+    ];
+    vi.mocked(findAllContacts).mockReturnValue(records);
+
+    const due = listFollowUps(today);
+    const dueNames = due.status === "ok" ? due.contacts.map((c) => c.name) : [];
+    const byStatus = listContacts()
+      .filter((c) => ["overdue", "today"].includes(followUpStatus(c, today)))
+      .map((c) => c.name);
+    expect(byStatus).toEqual(dueNames);
+    expect(dueNames).toEqual(["Alice", "Bruno", "Gaby"]);
+  });
+});
+
+describe("listPipeline : une colonne par étape (lot 6)", () => {
+  const contact = (id: number, name: string, stage: string | null, followUpDate: string | null = null): ContactRecord => ({
+    ...record(id, name),
+    stage,
+    followUpDate,
+  });
+
+  it("renvoie une colonne par étape, dans l'ordre du lot 4, même vide", () => {
+    const result = listPipeline("2026-11-20");
+
+    expect(result).toEqual({
+      status: "ok",
+      columns: [
+        { stage: "to_contact", contacts: [] },
+        { stage: "contacted", contacts: [] },
+        { stage: "in_discussion", contacts: [] },
+        { stage: "won", contacts: [] },
+        { stage: "lost", contacts: [] },
+      ],
+    });
+  });
+
+  it("range chaque contact dans la colonne de son étape, trié par nom sans casse ni accents", () => {
+    vi.mocked(findAllContacts).mockReturnValue([
+      contact(1, "Zoé", "contacted"),
+      contact(2, "émile", "contacted"),
+      contact(3, "Bruno", "won"),
+      contact(4, "alice", "contacted"),
+      contact(5, "Ancien", null),
+    ]);
+
+    const result = listPipeline("2026-11-20");
+    if (result.status !== "ok") throw new Error("attendu : ok");
+    expect(result.columns.map((column) => [column.stage, column.contacts.map((c) => c.name)])).toEqual([
+      ["to_contact", ["Ancien"]],
+      ["contacted", ["alice", "émile", "Zoé"]],
+      ["in_discussion", []],
+      ["won", ["Bruno"]],
+      ["lost", []],
+    ]);
+  });
+
+  it("donne l'état de relance de chaque contact pour la date du jour reçue", () => {
+    vi.mocked(findAllContacts).mockReturnValue([
+      contact(1, "Alice", "to_contact", "2026-11-19"),
+      contact(2, "Bruno", "to_contact", "2026-11-20"),
+      contact(3, "Chloé", "to_contact", "2026-12-01"),
+      contact(4, "David", "to_contact", null),
+    ]);
+
+    const result = listPipeline("2026-11-20");
+    if (result.status !== "ok") throw new Error("attendu : ok");
+    expect(result.columns[0].contacts.map((c) => [c.name, c.followUp])).toEqual([
+      ["Alice", "overdue"],
+      ["Bruno", "today"],
+      ["Chloé", "scheduled"],
+      ["David", "none"],
+    ]);
+  });
+
+  it.each([undefined, null, 20261120, "20/11/2026", "2026-11-31", "x".repeat(500)])(
+    "refuse une date du jour invalide (%j) sans interroger la base",
+    (today) => {
+      expect(listPipeline(today)).toEqual({ status: "invalid" });
+      expect(findAllContacts).not.toHaveBeenCalled();
+    },
+  );
+});
+
+describe("countViews : les nombres du menu (lot 6)", () => {
+  it("compte tous les contacts et ceux à relancer aujourd'hui", () => {
+    vi.mocked(findAllContacts).mockReturnValue([
+      { ...record(1, "Alice"), followUpDate: "2026-11-19" },
+      { ...record(2, "Bruno"), followUpDate: "2026-11-20" },
+      { ...record(3, "Chloé"), followUpDate: "2026-12-01" },
+      { ...record(4, "David"), followUpDate: "2026-11-01", stage: "won" },
+    ]);
+
+    expect(countViews("2026-11-20")).toEqual({ status: "ok", contacts: 4, followUps: 2 });
+  });
+
+  it("compte zéro sans contact", () => {
+    expect(countViews("2026-11-20")).toEqual({ status: "ok", contacts: 0, followUps: 0 });
+  });
+
+  it.each([undefined, null, 20261120, "2026-02-30", "x".repeat(500)])(
+    "refuse une date du jour invalide (%j) sans interroger la base",
+    (today) => {
+      expect(countViews(today)).toEqual({ status: "invalid" });
+      expect(findAllContacts).not.toHaveBeenCalled();
+    },
+  );
 });

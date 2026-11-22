@@ -1,5 +1,5 @@
 "use server";
-// Couche présentation : reçoit le formulaire, délègue au service, puis revient à la liste.
+// Couche présentation : reçoit le formulaire, délègue au service, puis revient à la liste (/contacts, lot 6).
 import { refresh, revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import {
@@ -32,6 +32,13 @@ function readForm(formData: FormData) {
   return { raw, values, confirmDuplicate: formData.get("confirmDuplicate") };
 }
 
+// Les trois vues du menu montrent les contacts (lot 6).
+function revalidateViews() {
+  revalidatePath("/");
+  revalidatePath("/contacts");
+  revalidatePath("/follow-ups");
+}
+
 export async function addContact(_prev: ContactFormState, formData: FormData): Promise<ContactFormState> {
   const { raw, values, confirmDuplicate } = readForm(formData);
   const result = createContact(raw, { confirmDuplicate });
@@ -39,9 +46,8 @@ export async function addContact(_prev: ContactFormState, formData: FormData): P
   if (result.status === "invalid") return { values, errors: result.errors };
   if (result.status === "duplicate") return { values, duplicate: true };
 
-  revalidatePath("/");
-  revalidatePath("/follow-ups");
-  redirect("/");
+  revalidateViews();
+  redirect("/contacts");
 }
 
 // Liée à l'id du contact par `bind` dans la page de modification.
@@ -53,9 +59,8 @@ export async function editContact(id: string, _prev: ContactFormState, formData:
   if (result.status === "invalid") return { values, errors: result.errors };
   if (result.status === "duplicate") return { values, duplicate: true };
 
-  revalidatePath("/");
-  revalidatePath("/follow-ups");
-  redirect("/");
+  revalidateViews();
+  redirect("/contacts");
 }
 
 // Lot 4 : id et étape arrivent bruts du navigateur ; le service les valide. La liste est rafraîchie

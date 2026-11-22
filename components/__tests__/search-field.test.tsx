@@ -3,10 +3,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { SearchField } from "@/components/search-field";
 
 describe("components/search-field", () => {
-  it("envoie le texte cherché dans le paramètre q de la liste", () => {
+  it("envoie le texte cherché dans le paramètre q de la vue Contacts", () => {
     const html = renderToStaticMarkup(<SearchField defaultValue="" />);
 
-    expect(html).toMatch(/<form[^>]*action="\/"/);
+    expect(html).toMatch(/<form[^>]*action="\/contacts"/);
     expect(html).toMatch(/<input[^>]*name="q"/);
   });
 

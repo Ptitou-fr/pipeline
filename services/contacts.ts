@@ -9,7 +9,7 @@ import {
   type ContactFields,
   type ContactRecord,
 } from "@/data/contacts";
-import { INITIAL_STAGE, stageSchema, type Stage } from "@/services/stages";
+import { INITIAL_STAGE, STAGES, stageSchema, type Stage } from "@/services/stages";
 
 export type Contact = Omit<ContactRecord, "stage"> & { stage: string };
 
@@ -191,14 +191,55 @@ export type FollowUpsResult = { status: "ok"; contacts: Contact[] } | { status: 
 
 // Un contact est à relancer si sa date de relance est aujourd'hui ou passée (une relance en retard
 // reste visible tant que la date ne change pas) et s'il n'est ni gagné ni perdu.
+// `today` est une date AAAA-MM-JJ déjà validée.
+function isDue(contact: Contact, today: string): boolean {
+  return contact.followUpDate !== null && contact.followUpDate <= today && !CLOSED_STAGES.some((stage) => stage === contact.stage);
+}
+
 // `today` (AAAA-MM-JJ) est reçu en paramètre pour que la règle soit testable.
 export function listFollowUps(today: unknown): FollowUpsResult {
   const parsed = isoDate.safeParse(today);
   if (!parsed.success) return { status: "invalid" };
 
-  const isDue = (c: Contact) =>
-    c.followUpDate !== null && c.followUpDate <= parsed.data && !CLOSED_STAGES.some((stage) => stage === c.stage);
-  return { status: "ok", contacts: listContacts().filter(isDue) };
+  return { status: "ok", contacts: listContacts().filter((c) => isDue(c, parsed.data)) };
+}
+
+// ---------- Lot 6 : le pipeline par étapes
+
+// État de la relance affiché sur une carte : à relancer avec une date passée (overdue) ou du jour
+// (today), une date mais pas à relancer (scheduled : date future, ou contact gagné ou perdu), pas de date (none).
+export type FollowUpStatus = "overdue" | "today" | "scheduled" | "none";
+
+// Même règle « à relancer » que listFollowUps. `today` est une date AAAA-MM-JJ déjà validée.
+export function followUpStatus(contact: Contact, today: string): FollowUpStatus {
+  if (contact.followUpDate === null) return "none";
+  if (!isDue(contact, today)) return "scheduled";
+  return contact.followUpDate < today ? "overdue" : "today";
+}
+
+export type PipelineContact = Contact & { followUp: FollowUpStatus };
+export type PipelineColumn = { stage: Stage; contacts: PipelineContact[] };
+export type PipelineResult = { status: "ok"; columns: PipelineColumn[] } | { status: "invalid" };
+
+// Une colonne par étape, dans l'ordre du lot 4, même vide ; dans chaque colonne, les contacts triés
+// par nom comme la liste, chacun avec son état de relance pour `today` (AAAA-MM-JJ).
+export function listPipeline(today: unknown): PipelineResult {
+  const parsed = isoDate.safeParse(today);
+  if (!parsed.success) return { status: "invalid" };
+
+  const contacts = listContacts().map((c) => ({ ...c, followUp: followUpStatus(c, parsed.data) }));
+  return { status: "ok", columns: STAGES.map((stage) => ({ stage, contacts: contacts.filter((c) => c.stage === stage) })) };
+}
+
+export type ViewCountsResult = { status: "ok"; contacts: number; followUps: number } | { status: "invalid" };
+
+// Les nombres du menu : tous les contacts, et ceux à relancer pour `today` (AAAA-MM-JJ).
+export function countViews(today: unknown): ViewCountsResult {
+  const parsed = isoDate.safeParse(today);
+  if (!parsed.success) return { status: "invalid" };
+
+  const contacts = listContacts();
+  return { status: "ok", contacts: contacts.length, followUps: contacts.filter((c) => isDue(c, parsed.data)).length };
 }
 
 // « Aujourd'hui » suit l'heure locale de la machine.

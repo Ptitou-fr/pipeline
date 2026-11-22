@@ -16,7 +16,7 @@ async function EditContact({ params }: { params: Promise<{ id: string }> }) {
       action={editContact.bind(null, id)}
       limits={MAX_LENGTH}
       submitLabel="Enregistrer"
-      cancelHref="/"
+      cancelHref="/contacts"
       initialValues={{
         name: contact.name,
         company: contact.company ?? "",
