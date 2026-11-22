@@ -12,14 +12,15 @@ const layer = (dir) => ({
 });
 // Pilote de la base : seule la couche données l'importe. Il passe par la même règle que les
 // couches, car deux `no-restricted-imports` sur les mêmes fichiers s'écraseraient.
+// Turso : le client libSQL, tous ses sous-chemins (@libsql/client/web…) et le paquet natif libsql.
 const DRIVER = {
-  name: "node:sqlite",
+  regex: "^(@libsql/|libsql(/|$))",
   message: "Import interdit : seule la couche données (data/) importe le pilote de la base (voir .claude/rules/data.md).",
 };
 const forbidLayers = (files, names, { driver = true } = {}) => ({
   files,
   rules: {
-    "no-restricted-imports": ["error", { patterns: names.map(layer), paths: driver ? [DRIVER] : [] }],
+    "no-restricted-imports": ["error", { patterns: [...names.map(layer), ...(driver ? [DRIVER] : [])] }],
   },
 });
 

@@ -10,7 +10,7 @@ import { countViews, localToday } from "@/services/contacts";
 
 async function CountedNav() {
   await connection();
-  const result = countViews(localToday());
+  const result = await countViews(localToday());
   return <CurrentSidebarNav counts={result.status === "ok" ? result : undefined} />;
 }
 

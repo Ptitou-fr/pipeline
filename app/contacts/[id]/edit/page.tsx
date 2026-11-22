@@ -8,7 +8,7 @@ import { getContact, MAX_LENGTH } from "@/services/contacts";
 
 async function EditContact({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const contact = getContact(id);
+  const contact = await getContact(id);
   if (!contact) notFound();
 
   return (

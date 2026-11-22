@@ -1,8 +1,8 @@
-// Couche données : seule couche qui parle à la base (SQLite, module intégré node:sqlite).
+// Couche données : seule couche qui parle à la base (Turso, par le client libSQL).
 // Lire, écrire, renvoyer : aucune règle métier, aucun tri. Aucun type du pilote n'est exporté.
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import { DatabaseSync } from "node:sqlite";
+import { createClient, type Client, type InStatement, type Row } from "@libsql/client";
 
 export type ContactRecord = {
   id: number;
@@ -22,38 +22,58 @@ export type ContactFields = Omit<ContactRecord, "id" | "stage">;
 
 const COLUMNS = "id, name, company, email, phone, follow_up_date, stage";
 
-let db: DatabaseSync | undefined;
+// Sans TURSO_DATABASE_URL, en local : un fichier libSQL, ignoré par git.
+const LOCAL_FILE = ".data/pipeline.db";
 
-// Ouverte au premier appel. PIPELINE_DB_PATH ne sert qu'aux tests (fichier temporaire).
-function database(): DatabaseSync {
-  if (!db) {
-    const path = process.env.PIPELINE_DB_PATH ?? ".data/pipeline.db";
-    mkdirSync(dirname(path), { recursive: true });
-    db = new DatabaseSync(path);
-    db.exec(`CREATE TABLE IF NOT EXISTS contacts (
-      id INTEGER PRIMARY KEY,
-      name TEXT NOT NULL,
-      company TEXT,
-      email TEXT,
-      phone TEXT,
-      stage TEXT,
-      follow_up_date TEXT
-    )`);
-    migrate(db);
+// Sur Vercel, un fichier local ne survit pas aux redéploiements : la base Turso est obligatoire.
+function databaseUrl(): string {
+  const url = process.env.TURSO_DATABASE_URL;
+  if (url) return url;
+  if (process.env.VERCEL) {
+    throw new Error("TURSO_DATABASE_URL manquante : sur Vercel, la base doit être Turso (voir .env.example).");
   }
-  return db;
+  mkdirSync(dirname(LOCAL_FILE), { recursive: true });
+  return `file:${LOCAL_FILE}`;
+}
+
+// Ouverte et migrée au premier appel, une seule fois même pour des requêtes simultanées.
+// Un échec n'est pas retenu : l'appel suivant réessaie.
+let ready: Promise<Client> | undefined;
+
+function database(): Promise<Client> {
+  ready ??= open().catch((error: unknown) => {
+    ready = undefined;
+    throw error;
+  });
+  return ready;
+}
+
+async function open(): Promise<Client> {
+  const client = createClient({ url: databaseUrl(), authToken: process.env.TURSO_AUTH_TOKEN });
+  await client.execute(`CREATE TABLE IF NOT EXISTS contacts (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    company TEXT,
+    email TEXT,
+    phone TEXT,
+    stage TEXT,
+    follow_up_date TEXT
+  )`);
+  await migrate(client);
+  return client;
 }
 
 // Ajoute les colonnes apparues après la création d'une base existante.
 // Lot 4 : les contacts déjà enregistrés n'ont pas d'étape (null).
 // Lot 5 : ils n'ont pas de date de relance.
-function migrate(db: DatabaseSync) {
-  const columns = new Set(db.prepare("PRAGMA table_info(contacts)").all().map((column) => column.name));
-  if (!columns.has("stage")) db.exec("ALTER TABLE contacts ADD COLUMN stage TEXT");
-  if (!columns.has("follow_up_date")) db.exec("ALTER TABLE contacts ADD COLUMN follow_up_date TEXT");
+async function migrate(client: Client) {
+  const { rows } = await client.execute("PRAGMA table_info(contacts)");
+  const columns = new Set(rows.map((column) => column.name));
+  if (!columns.has("stage")) await client.execute("ALTER TABLE contacts ADD COLUMN stage TEXT");
+  if (!columns.has("follow_up_date")) await client.execute("ALTER TABLE contacts ADD COLUMN follow_up_date TEXT");
 }
 
-const toRecord = (row: Record<string, unknown>): ContactRecord => ({
+const toRecord = (row: Row): ContactRecord => ({
   id: Number(row.id),
   name: String(row.name),
   company: row.company === null ? null : String(row.company),
@@ -63,39 +83,40 @@ const toRecord = (row: Record<string, unknown>): ContactRecord => ({
   stage: row.stage === null ? null : String(row.stage),
 });
 
-export function insertContact(fields: NewContactRecord): ContactRecord {
-  const row = database()
-    .prepare(
-      `INSERT INTO contacts (name, company, email, phone, follow_up_date, stage) VALUES (?, ?, ?, ?, ?, ?) RETURNING ${COLUMNS}`,
-    )
-    .get(fields.name, fields.company, fields.email, fields.phone, fields.followUpDate, fields.stage);
-  return toRecord(row as Record<string, unknown>);
+async function query(statement: InStatement): Promise<ContactRecord[]> {
+  const { rows } = await (await database()).execute(statement);
+  return rows.map(toRecord);
 }
 
-export function findAllContacts(): ContactRecord[] {
-  return database()
-    .prepare(`SELECT ${COLUMNS} FROM contacts`)
-    .all()
-    .map((row) => toRecord(row as Record<string, unknown>));
+const first = (records: ContactRecord[]): ContactRecord | null => records[0] ?? null;
+
+export async function insertContact(fields: NewContactRecord): Promise<ContactRecord> {
+  const [record] = await query({
+    sql: `INSERT INTO contacts (name, company, email, phone, follow_up_date, stage) VALUES (?, ?, ?, ?, ?, ?) RETURNING ${COLUMNS}`,
+    args: [fields.name, fields.company, fields.email, fields.phone, fields.followUpDate, fields.stage],
+  });
+  return record;
 }
 
-export function findContactById(id: number): ContactRecord | null {
-  const row = database().prepare(`SELECT ${COLUMNS} FROM contacts WHERE id = ?`).get(id);
-  return row ? toRecord(row as Record<string, unknown>) : null;
+export async function findAllContacts(): Promise<ContactRecord[]> {
+  return query(`SELECT ${COLUMNS} FROM contacts`);
 }
 
-// Renvoie null si aucun contact ne porte cet id.
-export function updateContact(id: number, fields: ContactFields): ContactRecord | null {
-  const row = database()
-    .prepare(
-      `UPDATE contacts SET name = ?, company = ?, email = ?, phone = ?, follow_up_date = ? WHERE id = ? RETURNING ${COLUMNS}`,
-    )
-    .get(fields.name, fields.company, fields.email, fields.phone, fields.followUpDate, id);
-  return row ? toRecord(row as Record<string, unknown>) : null;
+export async function findContactById(id: number): Promise<ContactRecord | null> {
+  return first(await query({ sql: `SELECT ${COLUMNS} FROM contacts WHERE id = ?`, args: [id] }));
 }
 
 // Renvoie null si aucun contact ne porte cet id.
-export function updateContactStage(id: number, stage: string): ContactRecord | null {
-  const row = database().prepare(`UPDATE contacts SET stage = ? WHERE id = ? RETURNING ${COLUMNS}`).get(stage, id);
-  return row ? toRecord(row as Record<string, unknown>) : null;
+export async function updateContact(id: number, fields: ContactFields): Promise<ContactRecord | null> {
+  return first(
+    await query({
+      sql: `UPDATE contacts SET name = ?, company = ?, email = ?, phone = ?, follow_up_date = ? WHERE id = ? RETURNING ${COLUMNS}`,
+      args: [fields.name, fields.company, fields.email, fields.phone, fields.followUpDate, id],
+    }),
+  );
+}
+
+// Renvoie null si aucun contact ne porte cet id.
+export async function updateContactStage(id: number, stage: string): Promise<ContactRecord | null> {
+  return first(await query({ sql: `UPDATE contacts SET stage = ? WHERE id = ? RETURNING ${COLUMNS}`, args: [stage, id] }));
 }

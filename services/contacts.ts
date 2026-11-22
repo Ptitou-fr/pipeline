@@ -73,8 +73,8 @@ const collator = new Intl.Collator("fr", { sensitivity: "base" });
 
 const byName = (a: Contact, b: Contact) => collator.compare(a.name, b.name) || a.id - b.id;
 
-export function listContacts(): Contact[] {
-  return findAllContacts().map(withStage).sort(byName);
+export async function listContacts(): Promise<Contact[]> {
+  return (await findAllContacts()).map(withStage).sort(byName);
 }
 
 // Recherche (lot 3) : texte contenu dans le nom ou l'entreprise, sans tenir compte de la casse ni des accents.
@@ -93,12 +93,12 @@ export type SearchContactsResult =
 
 const fold = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 
-export function searchContacts(query: unknown): SearchContactsResult {
+export async function searchContacts(query: unknown): Promise<SearchContactsResult> {
   const parsed = searchSchema.safeParse(query);
   if (!parsed.success) return { status: "invalid", error: parsed.error.issues[0].message as "invalid" | "too_long" };
 
   const text = parsed.data;
-  const contacts = listContacts();
+  const contacts = await listContacts();
   if (!text) return { status: "ok", contacts, query: "" };
 
   const needle = fold(text);
@@ -118,8 +118,8 @@ function parseContact(input: ContactInput): { fields: ContactFields } | { errors
 }
 
 // Un autre contact porte déjà ce nom ; `exceptId` exclut le contact modifié lui-même.
-function isDuplicate(name: string, exceptId?: number): boolean {
-  return findAllContacts().some((c) => c.id !== exceptId && collator.compare(c.name, name) === 0);
+async function isDuplicate(name: string, exceptId?: number): Promise<boolean> {
+  return (await findAllContacts()).some((c) => c.id !== exceptId && collator.compare(c.name, name) === 0);
 }
 
 function isConfirmed(confirmDuplicate: unknown): boolean {
@@ -131,54 +131,54 @@ function parseId(id: unknown): number | null {
   return parsed.success ? parsed.data : null;
 }
 
-export function getContact(id: unknown): Contact | null {
+export async function getContact(id: unknown): Promise<Contact | null> {
   const contactId = parseId(id);
   if (contactId === null) return null;
-  const record = findContactById(contactId);
+  const record = await findContactById(contactId);
   return record && withStage(record);
 }
 
-export function createContact(
+export async function createContact(
   input: ContactInput,
   { confirmDuplicate }: ContactOptions = {},
-): CreateContactResult {
+): Promise<CreateContactResult> {
   const parsed = parseContact(input);
   if ("errors" in parsed) return { status: "invalid", errors: parsed.errors };
 
-  if (!isConfirmed(confirmDuplicate) && isDuplicate(parsed.fields.name)) return { status: "duplicate" };
+  if (!isConfirmed(confirmDuplicate) && (await isDuplicate(parsed.fields.name))) return { status: "duplicate" };
 
-  return { status: "created", contact: withStage(insertContact({ ...parsed.fields, stage: INITIAL_STAGE })) };
+  return { status: "created", contact: withStage(await insertContact({ ...parsed.fields, stage: INITIAL_STAGE })) };
 }
 
-export function updateContact(
+export async function updateContact(
   id: unknown,
   input: ContactInput,
   { confirmDuplicate }: ContactOptions = {},
-): UpdateContactResult {
+): Promise<UpdateContactResult> {
   const contactId = parseId(id);
-  if (contactId === null || !findContactById(contactId)) return { status: "not_found" };
+  if (contactId === null || !(await findContactById(contactId))) return { status: "not_found" };
 
   const parsed = parseContact(input);
   if ("errors" in parsed) return { status: "invalid", errors: parsed.errors };
 
-  if (!isConfirmed(confirmDuplicate) && isDuplicate(parsed.fields.name, contactId)) return { status: "duplicate" };
+  if (!isConfirmed(confirmDuplicate) && (await isDuplicate(parsed.fields.name, contactId))) return { status: "duplicate" };
 
-  const contact = updateContactRecord(contactId, parsed.fields);
+  const contact = await updateContactRecord(contactId, parsed.fields);
   return contact ? { status: "updated", contact: withStage(contact) } : { status: "not_found" };
 }
 
 export type ChangeStageResult = { status: "updated"; contact: Contact } | { status: "invalid" } | { status: "not_found" };
 
 // Lot 4 : on passe librement d'une étape à l'autre, mais seulement parmi les cinq.
-export function changeStage(id: unknown, stage: unknown): ChangeStageResult {
+export async function changeStage(id: unknown, stage: unknown): Promise<ChangeStageResult> {
   // Les deux entrées sont validées avant tout accès à la couche données.
   const contactId = parseId(id);
   if (contactId === null) return { status: "not_found" };
   const parsed = stageSchema.safeParse(stage);
   if (!parsed.success) return { status: "invalid" };
-  if (!findContactById(contactId)) return { status: "not_found" };
+  if (!(await findContactById(contactId))) return { status: "not_found" };
 
-  const contact = updateContactStage(contactId, parsed.data);
+  const contact = await updateContactStage(contactId, parsed.data);
   return contact ? { status: "updated", contact: withStage(contact) } : { status: "not_found" };
 }
 
@@ -197,11 +197,11 @@ function isDue(contact: Contact, today: string): boolean {
 }
 
 // `today` (AAAA-MM-JJ) est reçu en paramètre pour que la règle soit testable.
-export function listFollowUps(today: unknown): FollowUpsResult {
+export async function listFollowUps(today: unknown): Promise<FollowUpsResult> {
   const parsed = isoDate.safeParse(today);
   if (!parsed.success) return { status: "invalid" };
 
-  return { status: "ok", contacts: listContacts().filter((c) => isDue(c, parsed.data)) };
+  return { status: "ok", contacts: (await listContacts()).filter((c) => isDue(c, parsed.data)) };
 }
 
 // ---------- Lot 6 : le pipeline par étapes
@@ -223,22 +223,22 @@ export type PipelineResult = { status: "ok"; columns: PipelineColumn[] } | { sta
 
 // Une colonne par étape, dans l'ordre du lot 4, même vide ; dans chaque colonne, les contacts triés
 // par nom comme la liste, chacun avec son état de relance pour `today` (AAAA-MM-JJ).
-export function listPipeline(today: unknown): PipelineResult {
+export async function listPipeline(today: unknown): Promise<PipelineResult> {
   const parsed = isoDate.safeParse(today);
   if (!parsed.success) return { status: "invalid" };
 
-  const contacts = listContacts().map((c) => ({ ...c, followUp: followUpStatus(c, parsed.data) }));
+  const contacts = (await listContacts()).map((c) => ({ ...c, followUp: followUpStatus(c, parsed.data) }));
   return { status: "ok", columns: STAGES.map((stage) => ({ stage, contacts: contacts.filter((c) => c.stage === stage) })) };
 }
 
 export type ViewCountsResult = { status: "ok"; contacts: number; followUps: number } | { status: "invalid" };
 
 // Les nombres du menu : tous les contacts, et ceux à relancer pour `today` (AAAA-MM-JJ).
-export function countViews(today: unknown): ViewCountsResult {
+export async function countViews(today: unknown): Promise<ViewCountsResult> {
   const parsed = isoDate.safeParse(today);
   if (!parsed.success) return { status: "invalid" };
 
-  const contacts = listContacts();
+  const contacts = await listContacts();
   return { status: "ok", contacts: contacts.length, followUps: contacts.filter((c) => isDue(c, parsed.data)).length };
 }
 

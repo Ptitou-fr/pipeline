@@ -7,7 +7,7 @@ import { listPipeline, localToday } from "@/services/contacts";
 
 async function Board() {
   await connection();
-  const result = listPipeline(localToday());
+  const result = await listPipeline(localToday());
   if (result.status === "invalid") {
     return <p className="text-destructive">La date du jour n’a pas pu être déterminée.</p>;
   }
