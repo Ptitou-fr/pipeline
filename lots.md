@@ -151,21 +151,21 @@ https://claude.ai/artifact/EbFaLdKgVzJTyFQZU5RiHM), en clair et en sombre.
 - Thème :
   - au départ, il suit le réglage clair ou sombre du système ;
   - un choix fait dans le menu est retenu dans un cookie ;
-  - le serveur pose la classe `.dark` sur `<html>` dès le premier rendu, pour éviter un flash du mauvais thème.
+  - un script en ligne dans le `<head>` pose la classe `.dark` sur `<html>` avant le premier affichage, pour éviter un flash du mauvais thème (lire le cookie côté serveur casserait le prérendu avec `cacheComponents`).
 - Le design reste Menthe (tokens de `app/globals.css`) : il n'y a ni nouvelle couleur en dur, ni nouveau champ, ni nouvelle étape.
 
 **Critères d'acceptation**
 
-- [ ] Étant donné mes contacts, quand j'ouvre `/`, alors je vois une colonne par étape, dans l'ordre du lot 4, chacune avec ses contacts triés par nom et leur nombre.
-- [ ] Étant donné un contact dans une colonne, quand je le glisse et le dépose dans une autre, alors il apparaît dans cette colonne, et la vue Contacts affiche sa nouvelle étape.
-- [ ] Étant donné une carte atteinte au clavier, quand j'active « Étape suivante » ou « Étape précédente », alors le contact passe à l'étape voisine.
-- [ ] Étant donné un déplacement refusé par le service, quand je dépose la carte, alors elle revient dans sa colonne d'origine et je vois que l'étape n'a pas été enregistrée.
-- [ ] Étant donné un contact déplacé, quand je redémarre le serveur, alors il est toujours dans sa nouvelle colonne.
-- [ ] Étant donné des contacts avec une relance en retard, du jour, future, ou sans date, quand j'ouvre la vue Pipeline, alors chaque carte affiche le bon état de relance, et ce classement est testé dans la couche service.
-- [ ] Étant donné n'importe quelle vue, quand je choisis une entrée du menu, alors j'arrive sur cette vue, marquée comme active, et chaque entrée affiche son nombre de contacts.
-- [ ] Étant donné la vue Contacts, quand je cherche, change une étape ou modifie un contact, alors tout fonctionne comme aux lots 2 à 4.
-- [ ] Étant donné aucun choix de thème, quand j'ouvre l'app, alors elle suit le réglage clair ou sombre du système.
-- [ ] Étant donné que j'ai choisi « Sombre », quand je recharge la page, alors l'app s'affiche directement en sombre, sans passer par le clair.
+- [x] Étant donné mes contacts, quand j'ouvre `/`, alors je vois une colonne par étape, dans l'ordre du lot 4, chacune avec ses contacts triés par nom et leur nombre.
+- [x] Étant donné un contact dans une colonne, quand je le glisse et le dépose dans une autre, alors il apparaît dans cette colonne, et la vue Contacts affiche sa nouvelle étape.
+- [x] Étant donné une carte atteinte au clavier, quand j'active « Étape suivante » ou « Étape précédente », alors le contact passe à l'étape voisine.
+- [x] Étant donné un déplacement refusé par le service, quand je dépose la carte, alors elle revient dans sa colonne d'origine et je vois que l'étape n'a pas été enregistrée.
+- [x] Étant donné un contact déplacé, quand je redémarre le serveur, alors il est toujours dans sa nouvelle colonne.
+- [x] Étant donné des contacts avec une relance en retard, du jour, future, ou sans date, quand j'ouvre la vue Pipeline, alors chaque carte affiche le bon état de relance, et ce classement est testé dans la couche service.
+- [x] Étant donné n'importe quelle vue, quand je choisis une entrée du menu, alors j'arrive sur cette vue, marquée comme active, et chaque entrée affiche son nombre de contacts.
+- [x] Étant donné la vue Contacts, quand je cherche, change une étape ou modifie un contact, alors tout fonctionne comme aux lots 2 à 4.
+- [x] Étant donné aucun choix de thème, quand j'ouvre l'app, alors elle suit le réglage clair ou sombre du système.
+- [x] Étant donné que j'ai choisi « Sombre », quand je recharge la page, alors l'app s'affiche directement en sombre, sans passer par le clair.
 
 ## Commun à tous les lots
 

@@ -1,13 +1,13 @@
 "use client";
-// Couche présentation : champ de recherche au-dessus de la liste. Chaque frappe relance la liste
-// avec ?q=… (le texte brut) ; c'est le service qui valide et filtre.
+// Couche présentation : champ de recherche de la vue Contacts. Chaque frappe relance la liste
+// avec /contacts?q=… (le texte brut) ; c'est le service qui valide et filtre.
 import Form from "next/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export function SearchField({ defaultValue, error }: { defaultValue: string; error?: string }) {
   return (
-    <Form action="/" replace role="search" className="flex flex-col gap-2">
+    <Form action="/contacts" replace role="search" className="flex flex-col gap-2">
       <Label htmlFor="q" className="sr-only">
         Rechercher un contact
       </Label>

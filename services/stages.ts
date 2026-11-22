@@ -23,3 +23,11 @@ export function stageLabel(stage: string): string {
   const parsed = stageSchema.safeParse(stage);
   return parsed.success ? STAGE_LABELS[parsed.data] : stage;
 }
+
+// Lot 6 : l'étape voisine dans l'ordre du pipeline (boutons « Étape précédente » et « Étape suivante »).
+// Aucune au-delà des extrémités, ni pour une étape inconnue.
+export function adjacentStage(stage: string, direction: "previous" | "next"): Stage | null {
+  const parsed = stageSchema.safeParse(stage);
+  if (!parsed.success) return null;
+  return STAGES[STAGES.indexOf(parsed.data) + (direction === "next" ? 1 : -1)] ?? null;
+}

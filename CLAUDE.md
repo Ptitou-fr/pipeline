@@ -26,11 +26,16 @@ en anglais.
 
 ## État
 
-Lots 1 à 5 faits (voir `lots.md`) : `/` liste les contacts triés par nom,
-filtrés par `?q=` (`searchContacts`, nom ou entreprise, sans casse ni accents),
+Lots 1 à 6 faits (voir `lots.md`). Un menu latéral (`components/app-sidebar.tsx`,
+`components/sidebar-nav.tsx`) mène aux trois vues avec leur nombre de contacts
+(`countViews`). `/` est la vue Pipeline (`listPipeline`, `components/pipeline-board.tsx`) :
+une colonne par étape, chaque carte avec son état de relance (`followUpStatus`),
+déplacée par glisser-déposer HTML5 ou par ses boutons « Étape précédente » /
+« Étape suivante » (`adjacentStage`). `/contacts` liste les contacts triés par
+nom, filtrés par `?q=` (`searchContacts`, nom ou entreprise, sans casse ni accents) ;
 `/contacts/new` les ajoute, `/contacts/[id]/edit` les modifie dans le même
-formulaire (`components/contact-form.tsx`). Étapes du pipeline dans
-`services/stages.ts`, changées depuis la liste (`changeStage`). Vue « À relancer » sur
+formulaire (`components/contact-form.tsx`), puis on revient sur `/contacts`. Étapes du pipeline dans
+`services/stages.ts`, changées depuis la liste ou le tableau (`changeStage`). Vue « À relancer » sur
 `/follow-ups` (`listFollowUps`, date du jour locale par `localToday`). Validation par schéma Zod et
 doublons décidés par `services/contacts.ts`, longueurs maximales dans
 `MAX_LENGTH`. Base SQLite par `node:sqlite` (Node 24) dans
@@ -108,8 +113,12 @@ Tailwind qui en découlent (`bg-primary`, `text-muted-foreground`,
   tailles relevées). Tout bouton passe par ce composant, jamais par un
   `<button>` stylé à la main. Un `shadcn add` qui réécrit ce fichier efface
   l'adaptation.
-- Le mode sombre s'active par la classe `.dark` sur `<html>` ; rien ne la pose
-  encore.
+- Le mode sombre s'active par la classe `.dark` sur `<html>`. Un script en ligne
+  dans le `<head>` (`THEME_SCRIPT`, `components/theme.ts`) la pose avant le premier
+  affichage, d'après le cookie `theme`, sinon le réglage du système ; le
+  sélecteur du menu (`components/theme-toggle.tsx`) écrit la classe et le
+  cookie. Le serveur ne lit pas le cookie : `cookies()` dans le layout racine
+  casserait le prérendu avec `cacheComponents`.
 - shadcn en style `base-nova` sur `@base-ui/react` (pas Radix) ; les composants
   vont dans `@/components/ui`, les icônes viennent de `lucide-react`. `cn` est
   réexporté depuis le paquet `cn` dans `lib/utils.ts`.
