@@ -7,7 +7,7 @@ import { listFollowUps, localToday } from "@/services/contacts";
 
 async function FollowUps() {
   await connection();
-  const result = listFollowUps(localToday());
+  const result = await listFollowUps(localToday());
   if (result.status === "invalid") {
     return <p className="text-destructive">La date du jour n’a pas pu être déterminée.</p>;
   }

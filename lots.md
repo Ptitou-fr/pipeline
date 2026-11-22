@@ -176,8 +176,16 @@ Un lot est terminé quand :
 - les vérifications des `.claude/rules/` passent ;
 - le rendu Menthe est vérifié en clair et en sombre.
 
-## Plus tard
+## Base managée : Turso
 
-Le déploiement Vercel remplacera SQLite par une base managée, en ne modifiant
-que la couche données. Il couvrira le critère d'`INTENT.md` « après un
-redéploiement, mes contacts sont toujours là ».
+Pour le déploiement Vercel, SQLite local est remplacé par Turso (libSQL). Il
+couvre le critère d'`INTENT.md` « après un redéploiement, mes contacts sont
+toujours là ».
+
+- Client `@libsql/client` ; la couche données devient asynchrone, et les
+  services et pages ajoutent leurs `await`, une seule fois.
+- En local, sans `TURSO_DATABASE_URL` : le fichier `.data/pipeline.db`.
+- Sur Vercel, en Production seulement : `TURSO_DATABASE_URL` et
+  `TURSO_AUTH_TOKEN`, obligatoires.
+- Les contacts de test de `.data/pipeline.db` sont recopiés dans Turso.
+- La base et le jeton Turso sont créés par Patrick, hors du dépôt.

@@ -12,7 +12,7 @@ const SEARCH_ERRORS = {
 
 async function Contacts({ searchParams }: { searchParams: PageProps<"/contacts">["searchParams"] }) {
   const { q } = await searchParams;
-  const result = searchContacts(q);
+  const result = await searchContacts(q);
   // Réaffichage seulement : le champ montre ce qui a été tapé.
   const typed = typeof q === "string" ? q : "";
 

@@ -34,32 +34,32 @@ const record = (id: number, name: string): ContactRecord => ({ id, name, company
 
 beforeEach(() => {
   vi.mocked(insertContact).mockReset();
-  vi.mocked(insertContact).mockImplementation((fields) => ({ id: 1, ...fields }));
+  vi.mocked(insertContact).mockImplementation(async (fields) => ({ id: 1, ...fields }));
   vi.mocked(findAllContacts).mockReset();
-  vi.mocked(findAllContacts).mockReturnValue([]);
+  vi.mocked(findAllContacts).mockResolvedValue([]);
   vi.mocked(findContactById).mockReset();
-  vi.mocked(findContactById).mockReturnValue(null);
+  vi.mocked(findContactById).mockResolvedValue(null);
   vi.mocked(updateContactRecord).mockReset();
-  vi.mocked(updateContactRecord).mockImplementation((id, fields) => ({ id, ...fields, stage: "to_contact" }));
+  vi.mocked(updateContactRecord).mockImplementation(async (id, fields) => ({ id, ...fields, stage: "to_contact" }));
   vi.mocked(updateContactStage).mockReset();
-  vi.mocked(updateContactStage).mockImplementation((id, stage) => ({ ...record(id, "Alice"), stage }));
+  vi.mocked(updateContactStage).mockImplementation(async (id, stage) => ({ ...record(id, "Alice"), stage }));
 });
 
 describe("listContacts", () => {
-  it("renvoie une liste vide quand il n'y a aucun contact", () => {
-    expect(listContacts()).toEqual([]);
+  it("renvoie une liste vide quand il n'y a aucun contact", async () => {
+    expect(await listContacts()).toEqual([]);
   });
 
-  it("trie par nom, sans tenir compte de la casse ni des accents", () => {
-    vi.mocked(findAllContacts).mockReturnValue([record(1, "émile"), record(2, "Bernard"), record(3, "alice")]);
+  it("trie par nom, sans tenir compte de la casse ni des accents", async () => {
+    vi.mocked(findAllContacts).mockResolvedValue([record(1, "émile"), record(2, "Bernard"), record(3, "alice")]);
 
-    expect(listContacts().map((c) => c.name)).toEqual(["alice", "Bernard", "émile"]);
+    expect((await listContacts()).map((c) => c.name)).toEqual(["alice", "Bernard", "émile"]);
   });
 });
 
 describe("createContact", () => {
-  it("crée un contact valide avec ses valeurs nettoyées", () => {
-    const result = createContact({ name: "  Alice  ", company: " Acme ", email: " alice@acme.fr ", phone: " 06 12 " });
+  it("crée un contact valide avec ses valeurs nettoyées", async () => {
+    const result = await createContact({ name: "  Alice  ", company: " Acme ", email: " alice@acme.fr ", phone: " 06 12 " });
 
     expect(insertContact).toHaveBeenCalledWith({ name: "Alice", company: "Acme", email: "alice@acme.fr", phone: "06 12", followUpDate: null, stage: "to_contact" });
     expect(result).toEqual({
@@ -68,28 +68,28 @@ describe("createContact", () => {
     });
   });
 
-  it("enregistre les champs facultatifs vides à null", () => {
-    createContact({ name: "Bob", company: "", email: "  ", phone: "" });
+  it("enregistre les champs facultatifs vides à null", async () => {
+    await createContact({ name: "Bob", company: "", email: "  ", phone: "" });
 
     expect(insertContact).toHaveBeenCalledWith({ name: "Bob", company: null, email: null, phone: null, followUpDate: null, stage: "to_contact" });
   });
 
-  it.each(["", "   "])("refuse un nom vide (%j) et ne crée rien", (name) => {
-    expect(createContact({ name })).toEqual({ status: "invalid", errors: { name: "required" } });
+  it.each(["", "   "])("refuse un nom vide (%j) et ne crée rien", async (name) => {
+    expect(await createContact({ name })).toEqual({ status: "invalid", errors: { name: "required" } });
     expect(insertContact).not.toHaveBeenCalled();
   });
 
-  it.each(["pas-un-mail", "a@b", "a b@c.fr", "@acme.fr"])("refuse un e-mail mal formé (%j) et ne crée rien", (email) => {
-    expect(createContact({ name: "Alice", email })).toEqual({ status: "invalid", errors: { email: "invalid" } });
+  it.each(["pas-un-mail", "a@b", "a b@c.fr", "@acme.fr"])("refuse un e-mail mal formé (%j) et ne crée rien", async (email) => {
+    expect(await createContact({ name: "Alice", email })).toEqual({ status: "invalid", errors: { email: "invalid" } });
     expect(insertContact).not.toHaveBeenCalled();
   });
 
-  it("signale les deux erreurs à la fois", () => {
-    expect(createContact({ name: "", email: "x" })).toEqual({ status: "invalid", errors: { name: "required", email: "invalid" } });
+  it("signale les deux erreurs à la fois", async () => {
+    expect(await createContact({ name: "", email: "x" })).toEqual({ status: "invalid", errors: { name: "required", email: "invalid" } });
   });
 
-  it("refuse un nom absent", () => {
-    expect(createContact({})).toEqual({ status: "invalid", errors: { name: "required" } });
+  it("refuse un nom absent", async () => {
+    expect(await createContact({})).toEqual({ status: "invalid", errors: { name: "required" } });
     expect(insertContact).not.toHaveBeenCalled();
   });
 
@@ -98,8 +98,8 @@ describe("createContact", () => {
     ["company", new File(["x"], "x.txt")],
     ["email", ["a@b.fr"]],
     ["phone", { n: 1 }],
-  ])("refuse une valeur non textuelle pour %s et ne crée rien", (field, value) => {
-    expect(createContact({ name: "Alice", [field]: value })).toEqual({ status: "invalid", errors: { [field]: "invalid" } });
+  ])("refuse une valeur non textuelle pour %s et ne crée rien", async (field, value) => {
+    expect(await createContact({ name: "Alice", [field]: value })).toEqual({ status: "invalid", errors: { [field]: "invalid" } });
     expect(insertContact).not.toHaveBeenCalled();
   });
 
@@ -111,8 +111,8 @@ describe("createContact", () => {
     ["company", "c".repeat(100)],
     ["email", email(254)],
     ["phone", "0".repeat(30)],
-  ])("accepte %s à sa longueur maximale", (field, value) => {
-    expect(createContact({ name: "Alice", [field]: value }).status).toBe("created");
+  ])("accepte %s à sa longueur maximale", async (field, value) => {
+    expect((await createContact({ name: "Alice", [field]: value })).status).toBe("created");
   });
 
   it.each([
@@ -120,77 +120,77 @@ describe("createContact", () => {
     ["company", "c".repeat(101)],
     ["email", email(255)],
     ["phone", "0".repeat(31)],
-  ])("refuse %s trop long et ne crée rien", (field, value) => {
-    expect(createContact({ name: "Alice", [field]: value })).toEqual({ status: "invalid", errors: { [field]: "too_long" } });
+  ])("refuse %s trop long et ne crée rien", async (field, value) => {
+    expect(await createContact({ name: "Alice", [field]: value })).toEqual({ status: "invalid", errors: { [field]: "too_long" } });
     expect(insertContact).not.toHaveBeenCalled();
   });
 
-  it("compte la longueur après avoir retiré les espaces autour", () => {
-    expect(createContact({ name: `  ${"n".repeat(100)}  ` }).status).toBe("created");
+  it("compte la longueur après avoir retiré les espaces autour", async () => {
+    expect((await createContact({ name: `  ${"n".repeat(100)}  ` })).status).toBe("created");
   });
 
-  it("demande confirmation pour un nom déjà pris, sans tenir compte de la casse, des accents ni des espaces", () => {
-    vi.mocked(findAllContacts).mockReturnValue([record(7, "Émile Dupont")]);
+  it("demande confirmation pour un nom déjà pris, sans tenir compte de la casse, des accents ni des espaces", async () => {
+    vi.mocked(findAllContacts).mockResolvedValue([record(7, "Émile Dupont")]);
 
-    expect(createContact({ name: "  emile DUPONT " })).toEqual({ status: "duplicate" });
+    expect(await createContact({ name: "  emile DUPONT " })).toEqual({ status: "duplicate" });
     expect(insertContact).not.toHaveBeenCalled();
   });
 
-  it("crée le doublon une fois confirmé", () => {
-    vi.mocked(findAllContacts).mockReturnValue([record(7, "Dupont")]);
+  it("crée le doublon une fois confirmé", async () => {
+    vi.mocked(findAllContacts).mockResolvedValue([record(7, "Dupont")]);
 
-    const result = createContact({ name: "Dupont" }, { confirmDuplicate: "1" });
+    const result = await createContact({ name: "Dupont" }, { confirmDuplicate: "1" });
 
     expect(result.status).toBe("created");
     expect(insertContact).toHaveBeenCalledOnce();
   });
 
   // La confirmation vient brute du formulaire : seule la valeur "1" confirme.
-  it.each([true, 1, "oui", "", null, ["1"]])("ne confirme pas le doublon pour une valeur invalide (%j)", (confirmDuplicate) => {
-    vi.mocked(findAllContacts).mockReturnValue([record(7, "Dupont")]);
+  it.each([true, 1, "oui", "", null, ["1"]])("ne confirme pas le doublon pour une valeur invalide (%j)", async (confirmDuplicate) => {
+    vi.mocked(findAllContacts).mockResolvedValue([record(7, "Dupont")]);
 
-    expect(createContact({ name: "Dupont" }, { confirmDuplicate })).toEqual({ status: "duplicate" });
+    expect(await createContact({ name: "Dupont" }, { confirmDuplicate })).toEqual({ status: "duplicate" });
     expect(insertContact).not.toHaveBeenCalled();
   });
 
-  it("valide avant de chercher un doublon", () => {
-    vi.mocked(findAllContacts).mockReturnValue([record(7, "Dupont")]);
+  it("valide avant de chercher un doublon", async () => {
+    vi.mocked(findAllContacts).mockResolvedValue([record(7, "Dupont")]);
 
-    expect(createContact({ name: "Dupont", email: "x" })).toEqual({ status: "invalid", errors: { email: "invalid" } });
+    expect(await createContact({ name: "Dupont", email: "x" })).toEqual({ status: "invalid", errors: { email: "invalid" } });
   });
 });
 
 describe("getContact", () => {
-  it("renvoie le contact demandé, l'id venant de l'URL sous forme de texte", () => {
+  it("renvoie le contact demandé, l'id venant de l'URL sous forme de texte", async () => {
     const alice = record(3, "Alice");
-    vi.mocked(findContactById).mockReturnValue(alice);
+    vi.mocked(findContactById).mockResolvedValue(alice);
 
-    expect(getContact("3")).toEqual(alice);
+    expect(await getContact("3")).toEqual(alice);
     expect(findContactById).toHaveBeenCalledWith(3);
   });
 
-  it.each(["12345678901234567890", "9".repeat(400)])("renvoie null pour un id trop long (%s), sans interroger la base", (id) => {
-    expect(getContact(id)).toBeNull();
+  it.each(["12345678901234567890", "9".repeat(400)])("renvoie null pour un id trop long (%s), sans interroger la base", async (id) => {
+    expect(await getContact(id)).toBeNull();
     expect(findContactById).not.toHaveBeenCalled();
   });
 
-  it("renvoie null pour un contact inconnu", () => {
-    expect(getContact("99")).toBeNull();
+  it("renvoie null pour un contact inconnu", async () => {
+    expect(await getContact("99")).toBeNull();
   });
 
-  it.each(["abc", "-1", "0", "1.5", "", undefined])("renvoie null pour un id invalide (%j), sans interroger la base", (id) => {
-    expect(getContact(id)).toBeNull();
+  it.each(["abc", "-1", "0", "1.5", "", undefined])("renvoie null pour un id invalide (%j), sans interroger la base", async (id) => {
+    expect(await getContact(id)).toBeNull();
     expect(findContactById).not.toHaveBeenCalled();
   });
 });
 
 describe("updateContact", () => {
   beforeEach(() => {
-    vi.mocked(findContactById).mockImplementation((id) => (id === 3 ? record(3, "Alice") : null));
+    vi.mocked(findContactById).mockImplementation(async (id) => (id === 3 ? record(3, "Alice") : null));
   });
 
-  it("enregistre une modification valide avec ses valeurs nettoyées", () => {
-    const result = updateContact("3", { name: " Alice Martin ", company: " Acme ", email: "", phone: " 06 12 " });
+  it("enregistre une modification valide avec ses valeurs nettoyées", async () => {
+    const result = await updateContact("3", { name: " Alice Martin ", company: " Acme ", email: "", phone: " 06 12 " });
 
     expect(updateContactRecord).toHaveBeenCalledWith(3, { name: "Alice Martin", company: "Acme", email: null, phone: "06 12", followUpDate: null });
     expect(result).toEqual({
@@ -199,13 +199,13 @@ describe("updateContact", () => {
     });
   });
 
-  it.each(["", "   "])("refuse un nom vidé (%j) et n'enregistre rien", (name) => {
-    expect(updateContact("3", { name })).toEqual({ status: "invalid", errors: { name: "required" } });
+  it.each(["", "   "])("refuse un nom vidé (%j) et n'enregistre rien", async (name) => {
+    expect(await updateContact("3", { name })).toEqual({ status: "invalid", errors: { name: "required" } });
     expect(updateContactRecord).not.toHaveBeenCalled();
   });
 
-  it("refuse un nom absent et n'enregistre rien", () => {
-    expect(updateContact("3", {})).toEqual({ status: "invalid", errors: { name: "required" } });
+  it("refuse un nom absent et n'enregistre rien", async () => {
+    expect(await updateContact("3", {})).toEqual({ status: "invalid", errors: { name: "required" } });
     expect(updateContactRecord).not.toHaveBeenCalled();
   });
 
@@ -214,63 +214,63 @@ describe("updateContact", () => {
     ["company", new File(["x"], "x.txt")],
     ["email", ["a@b.fr"]],
     ["phone", { n: 1 }],
-  ])("refuse une valeur non textuelle pour %s et n'enregistre rien", (field, value) => {
-    expect(updateContact("3", { name: "Alice", [field]: value })).toEqual({ status: "invalid", errors: { [field]: "invalid" } });
+  ])("refuse une valeur non textuelle pour %s et n'enregistre rien", async (field, value) => {
+    expect(await updateContact("3", { name: "Alice", [field]: value })).toEqual({ status: "invalid", errors: { [field]: "invalid" } });
     expect(updateContactRecord).not.toHaveBeenCalled();
   });
 
   it.each([
     ["name", "n".repeat(101)],
     ["company", "c".repeat(101)],
-  ])("refuse %s trop long et n'enregistre rien", (field, value) => {
-    expect(updateContact("3", { name: "Alice", [field]: value })).toEqual({ status: "invalid", errors: { [field]: "too_long" } });
+  ])("refuse %s trop long et n'enregistre rien", async (field, value) => {
+    expect(await updateContact("3", { name: "Alice", [field]: value })).toEqual({ status: "invalid", errors: { [field]: "too_long" } });
     expect(updateContactRecord).not.toHaveBeenCalled();
   });
 
-  it.each([undefined, "", "12345678901234567890"])("signale un id absent ou trop long (%j) sans interroger la base", (id) => {
-    expect(updateContact(id, { name: "Alice" })).toEqual({ status: "not_found" });
+  it.each([undefined, "", "12345678901234567890"])("signale un id absent ou trop long (%j) sans interroger la base", async (id) => {
+    expect(await updateContact(id, { name: "Alice" })).toEqual({ status: "not_found" });
     expect(findContactById).not.toHaveBeenCalled();
     expect(updateContactRecord).not.toHaveBeenCalled();
   });
 
-  it("ne confirme pas le doublon pour une valeur invalide", () => {
-    vi.mocked(findAllContacts).mockReturnValue([record(3, "Alice"), record(7, "Dupont")]);
+  it("ne confirme pas le doublon pour une valeur invalide", async () => {
+    vi.mocked(findAllContacts).mockResolvedValue([record(3, "Alice"), record(7, "Dupont")]);
 
-    expect(updateContact("3", { name: "Dupont" }, { confirmDuplicate: true })).toEqual({ status: "duplicate" });
+    expect(await updateContact("3", { name: "Dupont" }, { confirmDuplicate: true })).toEqual({ status: "duplicate" });
     expect(updateContactRecord).not.toHaveBeenCalled();
   });
 
-  it("applique la même validation qu'à l'ajout", () => {
-    expect(updateContact("3", { name: "Alice", email: "pas-un-mail", phone: "0".repeat(31) })).toEqual({
+  it("applique la même validation qu'à l'ajout", async () => {
+    expect(await updateContact("3", { name: "Alice", email: "pas-un-mail", phone: "0".repeat(31) })).toEqual({
       status: "invalid",
       errors: { email: "invalid", phone: "too_long" },
     });
     expect(updateContactRecord).not.toHaveBeenCalled();
   });
 
-  it.each(["99", "abc"])("signale un contact introuvable (%j) et n'enregistre rien", (id) => {
-    expect(updateContact(id, { name: "Alice" })).toEqual({ status: "not_found" });
+  it.each(["99", "abc"])("signale un contact introuvable (%j) et n'enregistre rien", async (id) => {
+    expect(await updateContact(id, { name: "Alice" })).toEqual({ status: "not_found" });
     expect(updateContactRecord).not.toHaveBeenCalled();
   });
 
-  it("demande confirmation pour le nom d'un autre contact", () => {
-    vi.mocked(findAllContacts).mockReturnValue([record(3, "Alice"), record(7, "Dupont")]);
+  it("demande confirmation pour le nom d'un autre contact", async () => {
+    vi.mocked(findAllContacts).mockResolvedValue([record(3, "Alice"), record(7, "Dupont")]);
 
-    expect(updateContact("3", { name: "dupont" })).toEqual({ status: "duplicate" });
+    expect(await updateContact("3", { name: "dupont" })).toEqual({ status: "duplicate" });
     expect(updateContactRecord).not.toHaveBeenCalled();
   });
 
-  it("enregistre le doublon une fois confirmé", () => {
-    vi.mocked(findAllContacts).mockReturnValue([record(3, "Alice"), record(7, "Dupont")]);
+  it("enregistre le doublon une fois confirmé", async () => {
+    vi.mocked(findAllContacts).mockResolvedValue([record(3, "Alice"), record(7, "Dupont")]);
 
-    expect(updateContact("3", { name: "Dupont" }, { confirmDuplicate: "1" }).status).toBe("updated");
+    expect((await updateContact("3", { name: "Dupont" }, { confirmDuplicate: "1" })).status).toBe("updated");
     expect(updateContactRecord).toHaveBeenCalledOnce();
   });
 
-  it("ne compte pas le contact lui-même comme un doublon", () => {
-    vi.mocked(findAllContacts).mockReturnValue([record(3, "Alice")]);
+  it("ne compte pas le contact lui-même comme un doublon", async () => {
+    vi.mocked(findAllContacts).mockResolvedValue([record(3, "Alice")]);
 
-    expect(updateContact("3", { name: "ALICE", company: "Acme" }).status).toBe("updated");
+    expect((await updateContact("3", { name: "ALICE", company: "Acme" })).status).toBe("updated");
   });
 });
 
@@ -281,90 +281,90 @@ describe("searchContacts", () => {
     record(3, "Dupont"),
     { ...record(4, "Bernard"), company: "Dupré SA" },
   ];
-  const names = (query: unknown) => {
-    const result = searchContacts(query);
+  const names = async (query: unknown) => {
+    const result = await searchContacts(query);
     return result.status === "ok" ? result.contacts.map((c) => c.name) : result;
   };
 
   beforeEach(() => {
-    vi.mocked(findAllContacts).mockReturnValue(contacts);
+    vi.mocked(findAllContacts).mockResolvedValue(contacts);
   });
 
-  it("ne garde que les contacts dont le nom contient le texte (« dup »), triés par nom", () => {
-    vi.mocked(findAllContacts).mockReturnValue([record(1, "Martin"), record(2, "Éts Dupuis"), record(3, "Dupont")]);
+  it("ne garde que les contacts dont le nom contient le texte (« dup »), triés par nom", async () => {
+    vi.mocked(findAllContacts).mockResolvedValue([record(1, "Martin"), record(2, "Éts Dupuis"), record(3, "Dupont")]);
 
-    expect(names("dup")).toEqual(["Dupont", "Éts Dupuis"]);
+    expect(await names("dup")).toEqual(["Dupont", "Éts Dupuis"]);
   });
 
-  it("cherche aussi dans l'entreprise", () => {
-    expect(names("dupré")).toEqual(["Bernard"]);
-    expect(names("batiment")).toEqual(["Éts Dupuis"]);
+  it("cherche aussi dans l'entreprise", async () => {
+    expect(await names("dupré")).toEqual(["Bernard"]);
+    expect(await names("batiment")).toEqual(["Éts Dupuis"]);
   });
 
-  it.each(["DUP", "Dup", "dûp"])("ignore les majuscules et les accents du texte cherché (%j)", (query) => {
-    expect(names(query)).toEqual(names("dup"));
+  it.each(["DUP", "Dup", "dûp"])("ignore les majuscules et les accents du texte cherché (%j)", async (query) => {
+    expect(await names(query)).toEqual(await names("dup"));
   });
 
-  it.each(["ets", "ETS", "éts"])("ignore les accents du contact (%j trouve « Éts Dupuis »)", (query) => {
-    expect(names(query)).toEqual(["Éts Dupuis"]);
+  it.each(["ets", "ETS", "éts"])("ignore les accents du contact (%j trouve « Éts Dupuis »)", async (query) => {
+    expect(await names(query)).toEqual(["Éts Dupuis"]);
   });
 
-  it("renvoie une liste vide quand rien ne correspond", () => {
-    expect(searchContacts("zzz")).toEqual({ status: "ok", contacts: [], query: "zzz" });
+  it("renvoie une liste vide quand rien ne correspond", async () => {
+    expect(await searchContacts("zzz")).toEqual({ status: "ok", contacts: [], query: "zzz" });
   });
 
-  it.each([undefined, null, "", "   "])("renvoie la liste complète pour une recherche vide (%j)", (query) => {
-    expect(searchContacts(query)).toEqual({ status: "ok", contacts: listContacts(), query: "" });
+  it.each([undefined, null, "", "   "])("renvoie la liste complète pour une recherche vide (%j)", async (query) => {
+    expect(await searchContacts(query)).toEqual({ status: "ok", contacts: await listContacts(), query: "" });
   });
 
-  it("renvoie le texte cherché sans les espaces autour", () => {
-    expect(searchContacts("  dup ")).toMatchObject({ status: "ok", query: "dup" });
+  it("renvoie le texte cherché sans les espaces autour", async () => {
+    expect(await searchContacts("  dup ")).toMatchObject({ status: "ok", query: "dup" });
   });
 
-  it.each([42, ["dup"], { q: "dup" }])("refuse un texte de mauvais type (%j) sans interroger la base", (query) => {
+  it.each([42, ["dup"], { q: "dup" }])("refuse un texte de mauvais type (%j) sans interroger la base", async (query) => {
     vi.mocked(findAllContacts).mockClear();
 
-    expect(searchContacts(query)).toEqual({ status: "invalid", error: "invalid" });
+    expect(await searchContacts(query)).toEqual({ status: "invalid", error: "invalid" });
     expect(findAllContacts).not.toHaveBeenCalled();
   });
 
-  it("refuse un texte trop long (plus de 100 caractères) sans interroger la base", () => {
+  it("refuse un texte trop long (plus de 100 caractères) sans interroger la base", async () => {
     vi.mocked(findAllContacts).mockClear();
 
-    expect(searchContacts("d".repeat(101))).toEqual({ status: "invalid", error: "too_long" });
+    expect(await searchContacts("d".repeat(101))).toEqual({ status: "invalid", error: "too_long" });
     expect(findAllContacts).not.toHaveBeenCalled();
-    expect(searchContacts("d".repeat(100)).status).toBe("ok");
+    expect((await searchContacts("d".repeat(100))).status).toBe("ok");
   });
 });
 
 describe("étape d'un contact (lot 4)", () => {
   beforeEach(() => {
-    vi.mocked(findContactById).mockImplementation((id) => (id === 3 ? record(3, "Alice") : null));
+    vi.mocked(findContactById).mockImplementation(async (id) => (id === 3 ? record(3, "Alice") : null));
   });
 
-  it("fait démarrer un nouveau contact à « À contacter » (to_contact)", () => {
-    const result = createContact({ name: "Alice" });
+  it("fait démarrer un nouveau contact à « À contacter » (to_contact)", async () => {
+    const result = await createContact({ name: "Alice" });
 
     expect(insertContact).toHaveBeenCalledWith(expect.objectContaining({ stage: "to_contact" }));
     expect(result).toMatchObject({ status: "created", contact: { stage: "to_contact" } });
   });
 
-  it.each(["to_contact", "contacted", "in_discussion", "won", "lost"])("accepte librement l'étape %s", (stage) => {
-    expect(changeStage("3", stage)).toEqual({ status: "updated", contact: { ...record(3, "Alice"), stage } });
+  it.each(["to_contact", "contacted", "in_discussion", "won", "lost"])("accepte librement l'étape %s", async (stage) => {
+    expect(await changeStage("3", stage)).toEqual({ status: "updated", contact: { ...record(3, "Alice"), stage } });
     expect(updateContactStage).toHaveBeenCalledWith(3, stage);
   });
 
   it.each(["archived", "Gagné", "WON", "", 3, null, undefined, ["won"], "won".repeat(400)])(
     "refuse une étape hors des cinq (%j) sans rien enregistrer",
-    (stage) => {
-      expect(changeStage("3", stage)).toEqual({ status: "invalid" });
+    async (stage) => {
+      expect(await changeStage("3", stage)).toEqual({ status: "invalid" });
       expect(findContactById).not.toHaveBeenCalled();
       expect(updateContactStage).not.toHaveBeenCalled();
     },
   );
 
-  it.each(["99", "abc", undefined, "12345678901234567890"])("signale un contact introuvable (%j) sans rien enregistrer", (id) => {
-    expect(changeStage(id, "won")).toEqual({ status: "not_found" });
+  it.each(["99", "abc", undefined, "12345678901234567890"])("signale un contact introuvable (%j) sans rien enregistrer", async (id) => {
+    expect(await changeStage(id, "won")).toEqual({ status: "not_found" });
     expect(updateContactStage).not.toHaveBeenCalled();
   });
 });
@@ -375,70 +375,70 @@ describe("contact sans étape enregistrée (lot 4)", () => {
   const withoutStage = (id: number, name: string): ContactRecord => ({ ...record(id, name), stage: null });
   const won = (id: number, name: string): ContactRecord => ({ ...record(id, name), stage: "won" });
 
-  it("listContacts lui donne l'étape de départ et garde l'étape des autres", () => {
-    vi.mocked(findAllContacts).mockReturnValue([withoutStage(1, "Ancien"), won(2, "Bob")]);
+  it("listContacts lui donne l'étape de départ et garde l'étape des autres", async () => {
+    vi.mocked(findAllContacts).mockResolvedValue([withoutStage(1, "Ancien"), won(2, "Bob")]);
 
-    expect(listContacts().map((c) => [c.name, c.stage])).toEqual([
+    expect((await listContacts()).map((c) => [c.name, c.stage])).toEqual([
       ["Ancien", "to_contact"],
       ["Bob", "won"],
     ]);
   });
 
-  it("searchContacts lui donne l'étape de départ", () => {
-    vi.mocked(findAllContacts).mockReturnValue([withoutStage(1, "Ancien")]);
+  it("searchContacts lui donne l'étape de départ", async () => {
+    vi.mocked(findAllContacts).mockResolvedValue([withoutStage(1, "Ancien")]);
 
-    expect(searchContacts("anc")).toMatchObject({ status: "ok", contacts: [{ name: "Ancien", stage: "to_contact" }] });
+    expect(await searchContacts("anc")).toMatchObject({ status: "ok", contacts: [{ name: "Ancien", stage: "to_contact" }] });
   });
 
-  it("getContact lui donne l'étape de départ", () => {
-    vi.mocked(findContactById).mockReturnValue(withoutStage(1, "Ancien"));
+  it("getContact lui donne l'étape de départ", async () => {
+    vi.mocked(findContactById).mockResolvedValue(withoutStage(1, "Ancien"));
 
-    expect(getContact("1")?.stage).toBe("to_contact");
+    expect((await getContact("1"))?.stage).toBe("to_contact");
   });
 
-  it("updateContact renvoie le contact modifié avec l'étape de départ", () => {
-    vi.mocked(findContactById).mockReturnValue(withoutStage(1, "Ancien"));
-    vi.mocked(updateContactRecord).mockImplementation((id, fields) => ({ id, ...fields, stage: null }));
+  it("updateContact renvoie le contact modifié avec l'étape de départ", async () => {
+    vi.mocked(findContactById).mockResolvedValue(withoutStage(1, "Ancien"));
+    vi.mocked(updateContactRecord).mockImplementation(async (id, fields) => ({ id, ...fields, stage: null }));
 
-    expect(updateContact("1", { name: "Ancien" })).toMatchObject({ status: "updated", contact: { stage: "to_contact" } });
+    expect(await updateContact("1", { name: "Ancien" })).toMatchObject({ status: "updated", contact: { stage: "to_contact" } });
   });
 
-  it("listFollowUps le garde à relancer, comme un contact à l'étape de départ", () => {
-    vi.mocked(findAllContacts).mockReturnValue([{ ...withoutStage(1, "Ancien"), followUpDate: "2026-11-20" }]);
+  it("listFollowUps le garde à relancer, comme un contact à l'étape de départ", async () => {
+    vi.mocked(findAllContacts).mockResolvedValue([{ ...withoutStage(1, "Ancien"), followUpDate: "2026-11-20" }]);
 
-    expect(listFollowUps("2026-11-21")).toMatchObject({ status: "ok", contacts: [{ name: "Ancien", stage: "to_contact" }] });
+    expect(await listFollowUps("2026-11-21")).toMatchObject({ status: "ok", contacts: [{ name: "Ancien", stage: "to_contact" }] });
   });
 });
 
 describe("date de prochaine relance (lot 5)", () => {
-  it("enregistre une date valide, et null quand le champ est vide ou absent", () => {
-    createContact({ name: "Alice", followUpDate: " 2026-12-01 " });
-    createContact({ name: "Bob", followUpDate: "" });
-    createContact({ name: "Carla" });
+  it("enregistre une date valide, et null quand le champ est vide ou absent", async () => {
+    await createContact({ name: "Alice", followUpDate: " 2026-12-01 " });
+    await createContact({ name: "Bob", followUpDate: "" });
+    await createContact({ name: "Carla" });
 
     expect(vi.mocked(insertContact).mock.calls.map(([fields]) => fields.followUpDate)).toEqual(["2026-12-01", null, null]);
   });
 
-  it("la modifie avec les autres informations", () => {
-    vi.mocked(findContactById).mockReturnValue(record(3, "Alice"));
+  it("la modifie avec les autres informations", async () => {
+    vi.mocked(findContactById).mockResolvedValue(record(3, "Alice"));
 
-    updateContact("3", { name: "Alice", followUpDate: "2027-01-15" });
+    await updateContact("3", { name: "Alice", followUpDate: "2027-01-15" });
 
     expect(updateContactRecord).toHaveBeenCalledWith(3, expect.objectContaining({ followUpDate: "2027-01-15" }));
   });
 
-  it.each(["01/12/2026", "2026-13-01", "2026-02-30", "demain", "2026-1-5"])("refuse une date mal formée (%j) sans rien enregistrer", (followUpDate) => {
-    expect(createContact({ name: "Alice", followUpDate })).toEqual({ status: "invalid", errors: { followUpDate: "invalid" } });
+  it.each(["01/12/2026", "2026-13-01", "2026-02-30", "demain", "2026-1-5"])("refuse une date mal formée (%j) sans rien enregistrer", async (followUpDate) => {
+    expect(await createContact({ name: "Alice", followUpDate })).toEqual({ status: "invalid", errors: { followUpDate: "invalid" } });
     expect(insertContact).not.toHaveBeenCalled();
   });
 
-  it.each([20261201, ["2026-12-01"], new Date()])("refuse une date de mauvais type (%j) sans rien enregistrer", (followUpDate) => {
-    expect(createContact({ name: "Alice", followUpDate })).toEqual({ status: "invalid", errors: { followUpDate: "invalid" } });
+  it.each([20261201, ["2026-12-01"], new Date()])("refuse une date de mauvais type (%j) sans rien enregistrer", async (followUpDate) => {
+    expect(await createContact({ name: "Alice", followUpDate })).toEqual({ status: "invalid", errors: { followUpDate: "invalid" } });
     expect(insertContact).not.toHaveBeenCalled();
   });
 
-  it("refuse une date trop longue sans rien enregistrer", () => {
-    expect(createContact({ name: "Alice", followUpDate: "2026-12-01T10:00" })).toEqual({
+  it("refuse une date trop longue sans rien enregistrer", async () => {
+    expect(await createContact({ name: "Alice", followUpDate: "2026-12-01T10:00" })).toEqual({
       status: "invalid",
       errors: { followUpDate: "too_long" },
     });
@@ -452,58 +452,58 @@ describe("listFollowUps : qui relancer aujourd'hui (lot 5)", () => {
     followUpDate,
     stage,
   });
-  const names = (today: unknown) => {
-    const result = listFollowUps(today);
+  const names = async (today: unknown) => {
+    const result = await listFollowUps(today);
     return result.status === "ok" ? result.contacts.map((c) => c.name) : result;
   };
 
-  it("garde exactement les contacts dont la date est aujourd'hui ou passée, triés par nom", () => {
-    vi.mocked(findAllContacts).mockReturnValue([
+  it("garde exactement les contacts dont la date est aujourd'hui ou passée, triés par nom", async () => {
+    vi.mocked(findAllContacts).mockResolvedValue([
       contact(1, "Zoé", "2026-11-20"),
       contact(2, "Alice", "2026-10-01"),
       contact(3, "Bruno", "2026-11-21"),
       contact(4, "Chloé", null),
     ]);
 
-    expect(names("2026-11-20")).toEqual(["Alice", "Zoé"]);
+    expect(await names("2026-11-20")).toEqual(["Alice", "Zoé"]);
   });
 
-  it("ne montre pas aujourd'hui un contact à relancer demain, mais le montre demain", () => {
-    vi.mocked(findAllContacts).mockReturnValue([contact(1, "Bruno", "2026-11-21")]);
+  it("ne montre pas aujourd'hui un contact à relancer demain, mais le montre demain", async () => {
+    vi.mocked(findAllContacts).mockResolvedValue([contact(1, "Bruno", "2026-11-21")]);
 
-    expect(names("2026-11-20")).toEqual([]);
-    expect(names("2026-11-21")).toEqual(["Bruno"]);
+    expect(await names("2026-11-20")).toEqual([]);
+    expect(await names("2026-11-21")).toEqual(["Bruno"]);
   });
 
-  it("garde une relance en retard tant que la date n'a pas changé", () => {
-    vi.mocked(findAllContacts).mockReturnValue([contact(1, "Alice", "2026-01-02")]);
+  it("garde une relance en retard tant que la date n'a pas changé", async () => {
+    vi.mocked(findAllContacts).mockResolvedValue([contact(1, "Alice", "2026-01-02")]);
 
-    expect(names("2026-11-20")).toEqual(["Alice"]);
+    expect(await names("2026-11-20")).toEqual(["Alice"]);
   });
 
-  it.each(["won", "lost"])("exclut un contact à l'étape %s même si sa date est passée", (stage) => {
-    vi.mocked(findAllContacts).mockReturnValue([contact(1, "Alice", "2026-11-01", stage), contact(2, "Bob", "2026-11-01", "in_discussion")]);
+  it.each(["won", "lost"])("exclut un contact à l'étape %s même si sa date est passée", async (stage) => {
+    vi.mocked(findAllContacts).mockResolvedValue([contact(1, "Alice", "2026-11-01", stage), contact(2, "Bob", "2026-11-01", "in_discussion")]);
 
-    expect(names("2026-11-20")).toEqual(["Bob"]);
+    expect(await names("2026-11-20")).toEqual(["Bob"]);
   });
 
-  it("renvoie une liste vide quand personne n'est à relancer", () => {
-    vi.mocked(findAllContacts).mockReturnValue([contact(1, "Alice", null), contact(2, "Bob", "2026-12-01")]);
+  it("renvoie une liste vide quand personne n'est à relancer", async () => {
+    vi.mocked(findAllContacts).mockResolvedValue([contact(1, "Alice", null), contact(2, "Bob", "2026-12-01")]);
 
-    expect(listFollowUps("2026-11-20")).toEqual({ status: "ok", contacts: [] });
+    expect(await listFollowUps("2026-11-20")).toEqual({ status: "ok", contacts: [] });
   });
 
   it.each([undefined, null, 20261120, "20/11/2026", "2026-11-31", "2026-11-20T00:00:00", "x".repeat(500)])(
     "refuse une date du jour invalide (%j) sans interroger la base",
-    (today) => {
-      expect(listFollowUps(today)).toEqual({ status: "invalid" });
+    async (today) => {
+      expect(await listFollowUps(today)).toEqual({ status: "invalid" });
       expect(findAllContacts).not.toHaveBeenCalled();
     },
   );
 });
 
 describe("localToday", () => {
-  it("donne la date du jour à l'heure locale de la machine, au format AAAA-MM-JJ", () => {
+  it("donne la date du jour à l'heure locale de la machine, au format AAAA-MM-JJ", async () => {
     expect(localToday(new Date(2026, 0, 5, 23, 59))).toBe("2026-01-05");
     expect(localToday(new Date(2026, 10, 20, 0, 1))).toBe("2026-11-20");
   });
@@ -515,30 +515,30 @@ describe("followUpStatus : état de la relance d'un contact (lot 6)", () => {
   const contact = (followUpDate: string | null, stage = "to_contact") => ({ ...record(1, "Alice"), followUpDate, stage });
   const today = "2026-11-20";
 
-  it("classe « en retard » un contact à relancer dont la date est passée", () => {
+  it("classe « en retard » un contact à relancer dont la date est passée", async () => {
     expect(followUpStatus(contact("2026-11-19"), today)).toBe("overdue");
     expect(followUpStatus(contact("2026-01-02"), today)).toBe("overdue");
   });
 
-  it("classe « aujourd'hui » un contact à relancer dont la date est aujourd'hui", () => {
+  it("classe « aujourd'hui » un contact à relancer dont la date est aujourd'hui", async () => {
     expect(followUpStatus(contact("2026-11-20"), today)).toBe("today");
   });
 
-  it("classe « prévue » un contact qui a une date future", () => {
+  it("classe « prévue » un contact qui a une date future", async () => {
     expect(followUpStatus(contact("2026-11-21"), today)).toBe("scheduled");
   });
 
-  it.each(["won", "lost"])("classe « prévue » un contact %s, qui n'est pas à relancer même si sa date est passée", (stage) => {
+  it.each(["won", "lost"])("classe « prévue » un contact %s, qui n'est pas à relancer même si sa date est passée", async (stage) => {
     expect(followUpStatus(contact("2026-11-01", stage), today)).toBe("scheduled");
     expect(followUpStatus(contact("2026-11-20", stage), today)).toBe("scheduled");
   });
 
-  it("classe « sans relance » un contact sans date", () => {
+  it("classe « sans relance » un contact sans date", async () => {
     expect(followUpStatus(contact(null), today)).toBe("none");
     expect(followUpStatus(contact(null, "won"), today)).toBe("none");
   });
 
-  it("suit la même règle que la vue « À relancer » : en retard ou aujourd'hui, exactement les contacts à relancer", () => {
+  it("suit la même règle que la vue « À relancer » : en retard ou aujourd'hui, exactement les contacts à relancer", async () => {
     const records = [
       { ...record(1, "Alice"), followUpDate: "2026-11-19" },
       { ...record(2, "Bruno"), followUpDate: "2026-11-20" },
@@ -548,11 +548,11 @@ describe("followUpStatus : état de la relance d'un contact (lot 6)", () => {
       { ...record(6, "Fanny"), followUpDate: "2026-11-01", stage: "lost" },
       { ...record(7, "Gaby"), followUpDate: "2026-11-02", stage: null },
     ];
-    vi.mocked(findAllContacts).mockReturnValue(records);
+    vi.mocked(findAllContacts).mockResolvedValue(records);
 
-    const due = listFollowUps(today);
+    const due = await listFollowUps(today);
     const dueNames = due.status === "ok" ? due.contacts.map((c) => c.name) : [];
-    const byStatus = listContacts()
+    const byStatus = (await listContacts())
       .filter((c) => ["overdue", "today"].includes(followUpStatus(c, today)))
       .map((c) => c.name);
     expect(byStatus).toEqual(dueNames);
@@ -567,8 +567,8 @@ describe("listPipeline : une colonne par étape (lot 6)", () => {
     followUpDate,
   });
 
-  it("renvoie une colonne par étape, dans l'ordre du lot 4, même vide", () => {
-    const result = listPipeline("2026-11-20");
+  it("renvoie une colonne par étape, dans l'ordre du lot 4, même vide", async () => {
+    const result = await listPipeline("2026-11-20");
 
     expect(result).toEqual({
       status: "ok",
@@ -582,8 +582,8 @@ describe("listPipeline : une colonne par étape (lot 6)", () => {
     });
   });
 
-  it("range chaque contact dans la colonne de son étape, trié par nom sans casse ni accents", () => {
-    vi.mocked(findAllContacts).mockReturnValue([
+  it("range chaque contact dans la colonne de son étape, trié par nom sans casse ni accents", async () => {
+    vi.mocked(findAllContacts).mockResolvedValue([
       contact(1, "Zoé", "contacted"),
       contact(2, "émile", "contacted"),
       contact(3, "Bruno", "won"),
@@ -591,7 +591,7 @@ describe("listPipeline : une colonne par étape (lot 6)", () => {
       contact(5, "Ancien", null),
     ]);
 
-    const result = listPipeline("2026-11-20");
+    const result = await listPipeline("2026-11-20");
     if (result.status !== "ok") throw new Error("attendu : ok");
     expect(result.columns.map((column) => [column.stage, column.contacts.map((c) => c.name)])).toEqual([
       ["to_contact", ["Ancien"]],
@@ -602,15 +602,15 @@ describe("listPipeline : une colonne par étape (lot 6)", () => {
     ]);
   });
 
-  it("donne l'état de relance de chaque contact pour la date du jour reçue", () => {
-    vi.mocked(findAllContacts).mockReturnValue([
+  it("donne l'état de relance de chaque contact pour la date du jour reçue", async () => {
+    vi.mocked(findAllContacts).mockResolvedValue([
       contact(1, "Alice", "to_contact", "2026-11-19"),
       contact(2, "Bruno", "to_contact", "2026-11-20"),
       contact(3, "Chloé", "to_contact", "2026-12-01"),
       contact(4, "David", "to_contact", null),
     ]);
 
-    const result = listPipeline("2026-11-20");
+    const result = await listPipeline("2026-11-20");
     if (result.status !== "ok") throw new Error("attendu : ok");
     expect(result.columns[0].contacts.map((c) => [c.name, c.followUp])).toEqual([
       ["Alice", "overdue"],
@@ -622,33 +622,33 @@ describe("listPipeline : une colonne par étape (lot 6)", () => {
 
   it.each([undefined, null, 20261120, "20/11/2026", "2026-11-31", "x".repeat(500)])(
     "refuse une date du jour invalide (%j) sans interroger la base",
-    (today) => {
-      expect(listPipeline(today)).toEqual({ status: "invalid" });
+    async (today) => {
+      expect(await listPipeline(today)).toEqual({ status: "invalid" });
       expect(findAllContacts).not.toHaveBeenCalled();
     },
   );
 });
 
 describe("countViews : les nombres du menu (lot 6)", () => {
-  it("compte tous les contacts et ceux à relancer aujourd'hui", () => {
-    vi.mocked(findAllContacts).mockReturnValue([
+  it("compte tous les contacts et ceux à relancer aujourd'hui", async () => {
+    vi.mocked(findAllContacts).mockResolvedValue([
       { ...record(1, "Alice"), followUpDate: "2026-11-19" },
       { ...record(2, "Bruno"), followUpDate: "2026-11-20" },
       { ...record(3, "Chloé"), followUpDate: "2026-12-01" },
       { ...record(4, "David"), followUpDate: "2026-11-01", stage: "won" },
     ]);
 
-    expect(countViews("2026-11-20")).toEqual({ status: "ok", contacts: 4, followUps: 2 });
+    expect(await countViews("2026-11-20")).toEqual({ status: "ok", contacts: 4, followUps: 2 });
   });
 
-  it("compte zéro sans contact", () => {
-    expect(countViews("2026-11-20")).toEqual({ status: "ok", contacts: 0, followUps: 0 });
+  it("compte zéro sans contact", async () => {
+    expect(await countViews("2026-11-20")).toEqual({ status: "ok", contacts: 0, followUps: 0 });
   });
 
   it.each([undefined, null, 20261120, "2026-02-30", "x".repeat(500)])(
     "refuse une date du jour invalide (%j) sans interroger la base",
-    (today) => {
-      expect(countViews(today)).toEqual({ status: "invalid" });
+    async (today) => {
+      expect(await countViews(today)).toEqual({ status: "invalid" });
       expect(findAllContacts).not.toHaveBeenCalled();
     },
   );

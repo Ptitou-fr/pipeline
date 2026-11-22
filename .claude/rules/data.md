@@ -17,15 +17,23 @@ Dossier : `data/`. Seule couche qui parle à la base.
   type ni objet du pilote. Changer de base ne doit modifier que `data/`.
 - Les données survivent aux redémarrages et aux redéploiements Vercel : pas de
   stockage en mémoire ni en fichier local.
-- Pilote : `node:sqlite` (module intégré de Node 24), fichier
-  `.data/pipeline.db`. Il est interdit hors de `data/` par la règle
-  `no-restricted-imports` de `eslint.config.mjs` (constante `DRIVER`).
-- Les tests ouvrent un fichier temporaire via `PIPELINE_DB_PATH`.
+- Pilote : `@libsql/client` (Turso). Il est interdit hors de `data/`, avec ses
+  sous-chemins et le paquet `libsql`, par la règle `no-restricted-imports` de
+  `eslint.config.mjs` (constante `DRIVER`).
+- Les fonctions exportées sont asynchrones (`Promise`) : c'est le contrat
+  commun aux bases managées, il ne change pas avec la base.
+- Base : `TURSO_DATABASE_URL` et `TURSO_AUTH_TOKEN` (voir `.env.example`).
+  Sans URL, en local : le fichier `.data/pipeline.db`. Sur Vercel (`VERCEL`
+  défini), l'URL est obligatoire, sinon erreur.
+- Le schéma est créé et migré au premier accès, une seule fois par instance,
+  même pour des requêtes simultanées.
+- Les tests fixent `TURSO_DATABASE_URL` sur un fichier temporaire
+  (`file:…`) : jamais `.data/pipeline.db`, jamais la base Turso.
 
 ## Comment vérifier
 
 - `pnpm lint` : échoue si `data/` importe la couche service ou la présentation,
   et si le pilote est importé ailleurs que dans `data/`.
 - Pilote importé hors de `data/`, doit ne rien renvoyer :
-  `git grep -nE "from ['\"]node:sqlite" -- . ':!data'`
+  `git grep -nE "from ['\"](@libsql/|libsql)" -- . ':!data'`
 - Aucun type du pilote dans les signatures exportées de `data/`.

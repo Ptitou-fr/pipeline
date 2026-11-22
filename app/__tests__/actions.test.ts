@@ -27,7 +27,7 @@ describe("changeContactStage", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("passe l'id et l'étape bruts au service", async () => {
-    vi.mocked(changeStage).mockReturnValue({ status: "updated", contact });
+    vi.mocked(changeStage).mockResolvedValue({ status: "updated", contact });
     await changeContactStage(1, "won");
     expect(changeStage).toHaveBeenCalledWith(1, "won");
   });
@@ -35,7 +35,7 @@ describe("changeContactStage", () => {
   it.each<ChangeStageResult>([{ status: "updated", contact }, { status: "invalid" }, { status: "not_found" }])(
     "renvoie le résultat du service ($status) et rafraîchit la liste",
     async (result) => {
-      vi.mocked(changeStage).mockReturnValue(result);
+      vi.mocked(changeStage).mockResolvedValue(result);
       await expect(changeContactStage(1, "won")).resolves.toEqual(result);
       expect(refresh).toHaveBeenCalledOnce();
     },
@@ -55,14 +55,26 @@ describe("retour à la liste après le formulaire", () => {
   const empty = { values: { name: "", company: "", email: "", phone: "", followUpDate: "" } };
 
   it("après un ajout, revient à la vue Contacts", async () => {
-    vi.mocked(createContact).mockReturnValue({ status: "created", contact });
+    vi.mocked(createContact).mockResolvedValue({ status: "created", contact });
     await addContact(empty, form());
     expect(redirect).toHaveBeenCalledWith("/contacts");
   });
 
   it("après une modification, revient à la vue Contacts", async () => {
-    vi.mocked(updateContact).mockReturnValue({ status: "updated", contact });
+    vi.mocked(updateContact).mockResolvedValue({ status: "updated", contact });
     await editContact("1", empty, form());
     expect(redirect).toHaveBeenCalledWith("/contacts");
+  });
+
+  it("après un ajout refusé, reste sur le formulaire et montre les erreurs", async () => {
+    vi.mocked(createContact).mockResolvedValue({ status: "invalid", errors: { name: "required" } });
+    await expect(addContact(empty, form())).resolves.toMatchObject({ errors: { name: "required" } });
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it("après une modification en doublon, reste sur le formulaire et demande confirmation", async () => {
+    vi.mocked(updateContact).mockResolvedValue({ status: "duplicate" });
+    await expect(editContact("1", empty, form())).resolves.toMatchObject({ duplicate: true });
+    expect(redirect).not.toHaveBeenCalled();
   });
 });

@@ -38,8 +38,10 @@ formulaire (`components/contact-form.tsx`), puis on revient sur `/contacts`. Ét
 `services/stages.ts`, changées depuis la liste ou le tableau (`changeStage`). Vue « À relancer » sur
 `/follow-ups` (`listFollowUps`, date du jour locale par `localToday`). Validation par schéma Zod et
 doublons décidés par `services/contacts.ts`, longueurs maximales dans
-`MAX_LENGTH`. Base SQLite par `node:sqlite` (Node 24) dans
-`.data/pipeline.db`, ignoré par git ; seul `data/contacts.ts` l'importe.
+`MAX_LENGTH`. Base Turso par `@libsql/client` (`TURSO_DATABASE_URL`,
+`TURSO_AUTH_TOKEN`, voir `.env.example`) ; sans URL, en local, le fichier
+`.data/pipeline.db`, ignoré par git. Seul `data/contacts.ts` importe le client,
+et ses fonctions sont asynchrones.
 
 ## Couches
 
@@ -47,7 +49,7 @@ doublons décidés par `services/contacts.ts`, longueurs maximales dans
 |---|---|---|
 | Présentation | `app/`, `components/` | `services/` |
 | Service | `services/` | `data/` |
-| Données | `data/` | la base (`node:sqlite`) |
+| Données | `data/` | la base (`@libsql/client`) |
 
 Vocabulaire : toujours présentation, service, données, comme dans
 `INTENT.md`. Une règle par couche dans `.claude/rules/` (`presentation.md`,
@@ -55,7 +57,7 @@ Vocabulaire : toujours présentation, service, données, comme dans
 
 `pnpm lint` fait échouer tout import contraire (règle `no-restricted-imports`
 dans `eslint.config.mjs`, alias `@/` et chemins relatifs), y compris celui de
-`node:sqlite` hors de `data/`. Changer de pilote : mettre à jour `DRIVER` dans
+`@libsql/client` (ses sous-chemins et `libsql`) hors de `data/`. Changer de pilote : mettre à jour `DRIVER` dans
 cette même règle.
 
 ## Commandes
@@ -70,8 +72,8 @@ pnpm uniquement (`packageManager: pnpm@10.32.1`).
 Tests : dans un dossier `__tests__/` à l'intérieur de chaque couche, nommés
 `*.test.ts(x)`. `vitest.config.mts` déclare l'alias `@` et l'environnement
 `node` ; les composants se testent par `renderToStaticMarkup` (pas de jsdom).
-Les tests de `data/` ouvrent un fichier SQLite temporaire via
-`PIPELINE_DB_PATH`, jamais `.data/pipeline.db`.
+Les tests de `data/` fixent `TURSO_DATABASE_URL` sur un fichier libSQL temporaire
+(`file:…`), jamais `.data/pipeline.db` ni la base Turso.
 
 ## Règles transverses
 
