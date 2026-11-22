@@ -100,6 +100,28 @@ Les tests de `data/` fixent `TURSO_DATABASE_URL` sur un fichier libSQL temporair
   `globals.css`, `pnpm dev` a continué de servir l'ancien CSS jusqu'à un
   redémarrage.
 
+## Déploiement : Vercel et Turso
+
+En production depuis le 2026-11-21.
+
+- Projet Vercel `pipeline`, relié à ce dépôt : chaque push sur `main` déploie
+  la production, chaque push sur une autre branche crée une préversion.
+- Accès : Vercel Authentication sur tous les déploiements (domaines
+  personnalisés compris) ; c'est la restriction « en dehors de l'app »
+  d'`INTENT.md`. Ne pas créer de lien de partage ni de contournement, même
+  pour une vérification.
+- Région des fonctions : `pdx1` (Oregon), à côté de la base Turso en
+  `aws-us-west-2`. Changer l'une, c'est changer l'autre : chaque page fait
+  plusieurs allers-retours vers la base.
+- Node `24.x`, comme en local.
+- `TURSO_DATABASE_URL` et `TURSO_AUTH_TOKEN` sont posées en Production
+  seulement. Une préversion n'a pas de base et refuse de l'ouvrir : c'est voulu,
+  pour qu'aucun essai n'écrive dans les vrais contacts.
+- La base et le jeton Turso se gèrent hors du dépôt, par Patrick. Aucune valeur
+  dans le code, les commits ou les PR : le dépôt est public.
+- En local, `.env.local` peut contenir les valeurs de production, commentées par
+  défaut. Décommentées, `pnpm dev` lit et écrit les vrais contacts.
+
 ## Design system : Menthe
 
 Choisi parmi les options de `design-options.html` (référence visuelle, clair et
