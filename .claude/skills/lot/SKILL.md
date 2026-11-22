@@ -44,6 +44,10 @@ redire. Argument : le numéro du lot ($ARGUMENTS).
   (`gh pr create`) et donne-moi le lien.
 - Dans le corps : les critères cochés, le test de chaque critère, la sortie
   rouge puis la sortie verte de `pnpm test`.
+- Le corps commence par `Closes #<issue du lot>`, pour que GitHub ferme
+  l'issue du lot à la fusion. Une PR qui couvre plusieurs lots met une ligne
+  par issue. L'issue est celle intitulée « Lot $ARGUMENTS · … » :
+  `gh issue list --label lot --search "Lot $ARGUMENTS in:title"`.
 
 ## Nomenclature des commits
 
