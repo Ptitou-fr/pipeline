@@ -4,9 +4,25 @@
 import { useOptimistic, useState, useTransition } from "react";
 import { changeContactStage } from "@/app/actions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { ChangeStageResult } from "@/services/contacts";
 import { STAGE_LABELS, STAGES } from "@/services/stages";
 
 const ITEMS = STAGES.map((stage) => ({ value: stage, label: STAGE_LABELS[stage] }));
+
+type ChooseStageDeps = {
+  show: (stage: string | null) => void;
+  setFailed: (failed: boolean) => void;
+  save: (contactId: number, stage: unknown) => Promise<ChangeStageResult>;
+};
+
+// Choix d'une étape : l'afficher tout de suite, l'enregistrer, puis signaler un échec.
+// Séparé du composant pour être testé sans navigateur (issue #12).
+export async function chooseStage(contactId: number, value: string | null, { show, setFailed, save }: ChooseStageDeps) {
+  show(value);
+  setFailed(false);
+  const result = await save(contactId, value);
+  setFailed(result.status !== "updated");
+}
 
 export function StageSelect({ contactId, contactName, stage }: { contactId: number; contactName: string; stage: string }) {
   const [pending, startTransition] = useTransition();
@@ -23,12 +39,7 @@ export function StageSelect({ contactId, contactName, stage }: { contactId: numb
         value={shownStage}
         disabled={pending}
         onValueChange={(value) =>
-          startTransition(async () => {
-            showStage(value);
-            setFailed(false);
-            const result = await changeContactStage(contactId, value);
-            setFailed(result.status !== "updated");
-          })
+          startTransition(() => chooseStage(contactId, value, { show: showStage, setFailed, save: changeContactStage }))
         }
       >
         <SelectTrigger size="sm" aria-label={`Étape de ${contactName}`} aria-describedby={failed ? errorId : undefined}>
