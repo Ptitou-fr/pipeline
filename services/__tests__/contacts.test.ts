@@ -366,6 +366,47 @@ describe("étape d'un contact (lot 4)", () => {
   });
 });
 
+// Issue #11 : un contact enregistré avant le lot 4 n'a pas d'étape en base (null) ; c'est le service,
+// pas la couche données, qui lui donne l'étape de départ.
+describe("contact sans étape enregistrée (lot 4)", () => {
+  const withoutStage = (id: number, name: string): ContactRecord => ({ ...record(id, name), stage: null });
+  const won = (id: number, name: string): ContactRecord => ({ ...record(id, name), stage: "won" });
+
+  it("listContacts lui donne l'étape de départ et garde l'étape des autres", () => {
+    vi.mocked(findAllContacts).mockReturnValue([withoutStage(1, "Ancien"), won(2, "Bob")]);
+
+    expect(listContacts().map((c) => [c.name, c.stage])).toEqual([
+      ["Ancien", "to_contact"],
+      ["Bob", "won"],
+    ]);
+  });
+
+  it("searchContacts lui donne l'étape de départ", () => {
+    vi.mocked(findAllContacts).mockReturnValue([withoutStage(1, "Ancien")]);
+
+    expect(searchContacts("anc")).toMatchObject({ status: "ok", contacts: [{ name: "Ancien", stage: "to_contact" }] });
+  });
+
+  it("getContact lui donne l'étape de départ", () => {
+    vi.mocked(findContactById).mockReturnValue(withoutStage(1, "Ancien"));
+
+    expect(getContact("1")?.stage).toBe("to_contact");
+  });
+
+  it("updateContact renvoie le contact modifié avec l'étape de départ", () => {
+    vi.mocked(findContactById).mockReturnValue(withoutStage(1, "Ancien"));
+    vi.mocked(updateContactRecord).mockImplementation((id, fields) => ({ id, ...fields, stage: null }));
+
+    expect(updateContact("1", { name: "Ancien" })).toMatchObject({ status: "updated", contact: { stage: "to_contact" } });
+  });
+
+  it("listFollowUps le garde à relancer, comme un contact à l'étape de départ", () => {
+    vi.mocked(findAllContacts).mockReturnValue([{ ...withoutStage(1, "Ancien"), followUpDate: "2026-11-20" }]);
+
+    expect(listFollowUps("2026-11-21")).toMatchObject({ status: "ok", contacts: [{ name: "Ancien", stage: "to_contact" }] });
+  });
+});
+
 describe("date de prochaine relance (lot 5)", () => {
   it("enregistre une date valide, et null quand le champ est vide ou absent", () => {
     createContact({ name: "Alice", followUpDate: " 2026-12-01 " });
