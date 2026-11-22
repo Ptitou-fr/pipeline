@@ -110,6 +110,63 @@ relancer aujourd'hui. Les autres n'y sont pas.
 - [x] Étant donné un contact à relancer demain, quand j'ouvre la vue, alors il n'y est pas aujourd'hui et il y sera demain.
 - [x] Étant donné un contact à « Gagné » ou « Perdu » dont la date est passée, quand j'ouvre la vue, alors il n'y est pas.
 
+## Lot 6 · Voir mon pipeline par étapes et déplacer un contact
+
+**Parcours.** J'ouvre l'app : un menu latéral mène à mes trois vues, et
+l'accueil montre mon pipeline, une colonne par étape. Je glisse un contact
+d'une colonne à l'autre : il change d'étape, et le changement est enregistré.
+Je choisis le thème clair ou sombre dans le menu, et l'app s'en souvient.
+
+Référence visuelle : la maquette « Pipeline — refonte » (canevas Claude Design,
+https://claude.ai/artifact/EbFaLdKgVzJTyFQZU5RiHM), en clair et en sombre.
+
+**Choix**
+
+- Menu latéral, sur toutes les pages :
+  - le bouton « Ajouter un contact » ;
+  - trois vues, chacune avec son nombre de contacts : Pipeline (`/`),
+    Contacts (`/contacts`), À relancer (`/follow-ups`) ;
+  - la vue en cours est marquée comme active ;
+  - en bas, le choix du thème : Clair ou Sombre ;
+  - à la largeur d'un téléphone, le menu passe au-dessus du contenu.
+- Vue Pipeline, à l'accueil (`/`) :
+  - une colonne par étape du lot 4, dans le même ordre, avec son nombre de contacts ;
+  - dans une colonne, les contacts sont triés par nom, comme la liste ;
+  - une colonne vide invite à y déposer un contact ;
+  - trop large pour l'écran, le tableau défile horizontalement.
+- Une carte montre le nom, l'entreprise et l'état de la relance :
+  - « En retard » si le contact est à relancer (lot 5) et que la date est passée ;
+  - « Aujourd'hui » s'il est à relancer et que la date est aujourd'hui ;
+  - « Relance le JJ/MM » s'il a une date mais n'est pas à relancer ;
+  - « Pas de relance » s'il n'a pas de date.
+  - Ce classement est une règle métier : il vit dans la couche service, avec la date du jour en paramètre.
+- Déplacer un contact :
+  - par glisser-déposer d'une colonne à l'autre ;
+  - ou au clavier, avec les boutons « Étape précédente » et « Étape suivante » de la carte ;
+  - le changement passe par le même service que le lot 4 ;
+  - un message confirme le déplacement ;
+  - un déplacement refusé ramène la carte dans sa colonne et le signale, comme pour le sélecteur (issue #10).
+- Vue Contacts (`/contacts`) : la liste actuelle déménage, avec sa recherche
+  (`?q=`), son sélecteur d'étape et son lien « Modifier ».
+- Thème :
+  - au départ, il suit le réglage clair ou sombre du système ;
+  - un choix fait dans le menu est retenu dans un cookie ;
+  - le serveur pose la classe `.dark` sur `<html>` dès le premier rendu, pour éviter un flash du mauvais thème.
+- Le design reste Menthe (tokens de `app/globals.css`) : il n'y a ni nouvelle couleur en dur, ni nouveau champ, ni nouvelle étape.
+
+**Critères d'acceptation**
+
+- [ ] Étant donné mes contacts, quand j'ouvre `/`, alors je vois une colonne par étape, dans l'ordre du lot 4, chacune avec ses contacts triés par nom et leur nombre.
+- [ ] Étant donné un contact dans une colonne, quand je le glisse et le dépose dans une autre, alors il apparaît dans cette colonne, et la vue Contacts affiche sa nouvelle étape.
+- [ ] Étant donné une carte atteinte au clavier, quand j'active « Étape suivante » ou « Étape précédente », alors le contact passe à l'étape voisine.
+- [ ] Étant donné un déplacement refusé par le service, quand je dépose la carte, alors elle revient dans sa colonne d'origine et je vois que l'étape n'a pas été enregistrée.
+- [ ] Étant donné un contact déplacé, quand je redémarre le serveur, alors il est toujours dans sa nouvelle colonne.
+- [ ] Étant donné des contacts avec une relance en retard, du jour, future, ou sans date, quand j'ouvre la vue Pipeline, alors chaque carte affiche le bon état de relance, et ce classement est testé dans la couche service.
+- [ ] Étant donné n'importe quelle vue, quand je choisis une entrée du menu, alors j'arrive sur cette vue, marquée comme active, et chaque entrée affiche son nombre de contacts.
+- [ ] Étant donné la vue Contacts, quand je cherche, change une étape ou modifie un contact, alors tout fonctionne comme aux lots 2 à 4.
+- [ ] Étant donné aucun choix de thème, quand j'ouvre l'app, alors elle suit le réglage clair ou sombre du système.
+- [ ] Étant donné que j'ai choisi « Sombre », quand je recharge la page, alors l'app s'affiche directement en sombre, sans passer par le clair.
+
 ## Commun à tous les lots
 
 Un lot est terminé quand :
