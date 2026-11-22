@@ -32,6 +32,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# Modèle sans valeur réelle, suivi par git (issue #19).
+!.env.example
 
 # vercel
 .vercel
