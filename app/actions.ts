@@ -2,7 +2,13 @@
 // Couche présentation : reçoit le formulaire, délègue au service, puis revient à la liste.
 import { refresh, revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
-import { changeStage, createContact, updateContact, type ContactErrors } from "@/services/contacts";
+import {
+  changeStage,
+  createContact,
+  updateContact,
+  type ChangeStageResult,
+  type ContactErrors,
+} from "@/services/contacts";
 
 export type ContactFormValues = { name: string; company: string; email: string; phone: string; followUpDate: string };
 
@@ -53,8 +59,10 @@ export async function editContact(id: string, _prev: ContactFormState, formData:
 }
 
 // Lot 4 : id et étape arrivent bruts du navigateur ; le service les valide. La liste est rafraîchie
-// dans tous les cas, pour toujours montrer l'étape réellement enregistrée.
-export async function changeContactStage(id: unknown, stage: unknown): Promise<void> {
-  changeStage(id, stage);
+// dans tous les cas, pour toujours montrer l'étape réellement enregistrée, et le résultat revient
+// au sélecteur, qui signale un échec.
+export async function changeContactStage(id: unknown, stage: unknown): Promise<ChangeStageResult> {
+  const result = changeStage(id, stage);
   refresh();
+  return result;
 }
