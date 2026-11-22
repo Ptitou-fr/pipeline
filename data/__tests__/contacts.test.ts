@@ -128,7 +128,19 @@ describe("data/contacts", () => {
     expect(second.findContactById(created.id)?.stage).toBe("contacted");
   });
 
-  it("ajoute l'étape « to_contact » aux contacts d'une base créée avant le lot 4", async () => {
+  // Issue #11 : l'étape de départ est une règle métier, appliquée par le service ; la base n'en connaît aucune.
+  it("crée la colonne de l'étape sans valeur par défaut ni obligation", async () => {
+    const { findAllContacts } = await load();
+    findAllContacts();
+
+    const db = new DatabaseSync(join(dir, "test.db"));
+    const stage = db.prepare("PRAGMA table_info(contacts)").all().find((column) => column.name === "stage");
+    db.close();
+
+    expect(stage).toMatchObject({ notnull: 0, dflt_value: null });
+  });
+
+  it("ajoute une étape vide (null) aux contacts d'une base créée avant le lot 4", async () => {
     const path = join(dir, "ancienne.db");
     mkdirSync(dir, { recursive: true });
     const old = new DatabaseSync(path);
@@ -139,7 +151,7 @@ describe("data/contacts", () => {
 
     const { findAllContacts } = await load();
 
-    expect(findAllContacts()).toEqual([{ id: 1, name: "Ancien", company: null, email: null, phone: null, followUpDate: null, stage: "to_contact" }]);
+    expect(findAllContacts()).toEqual([{ id: 1, name: "Ancien", company: null, email: null, phone: null, followUpDate: null, stage: null }]);
   });
 
   // Lot 5 : date de prochaine relance.

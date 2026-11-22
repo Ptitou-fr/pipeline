@@ -11,7 +11,10 @@ import {
 } from "@/data/contacts";
 import { INITIAL_STAGE, stageSchema, type Stage } from "@/services/stages";
 
-export type Contact = ContactRecord;
+export type Contact = Omit<ContactRecord, "stage"> & { stage: string };
+
+// Lot 4 : un contact enregistré avant les étapes n'en a pas en base ; il est à l'étape de départ.
+const withStage = (record: ContactRecord): Contact => ({ ...record, stage: record.stage ?? INITIAL_STAGE });
 
 // Ce qu'envoie l'appelant (formulaire…), tel quel : le schéma ci-dessous décide de ce qui est accepté.
 export type ContactInput = Record<string, unknown>;
@@ -71,7 +74,7 @@ const collator = new Intl.Collator("fr", { sensitivity: "base" });
 const byName = (a: Contact, b: Contact) => collator.compare(a.name, b.name) || a.id - b.id;
 
 export function listContacts(): Contact[] {
-  return findAllContacts().sort(byName);
+  return findAllContacts().map(withStage).sort(byName);
 }
 
 // Recherche (lot 3) : texte contenu dans le nom ou l'entreprise, sans tenir compte de la casse ni des accents.
@@ -130,7 +133,9 @@ function parseId(id: unknown): number | null {
 
 export function getContact(id: unknown): Contact | null {
   const contactId = parseId(id);
-  return contactId === null ? null : findContactById(contactId);
+  if (contactId === null) return null;
+  const record = findContactById(contactId);
+  return record && withStage(record);
 }
 
 export function createContact(
@@ -142,7 +147,7 @@ export function createContact(
 
   if (!isConfirmed(confirmDuplicate) && isDuplicate(parsed.fields.name)) return { status: "duplicate" };
 
-  return { status: "created", contact: insertContact({ ...parsed.fields, stage: INITIAL_STAGE }) };
+  return { status: "created", contact: withStage(insertContact({ ...parsed.fields, stage: INITIAL_STAGE })) };
 }
 
 export function updateContact(
@@ -159,7 +164,7 @@ export function updateContact(
   if (!isConfirmed(confirmDuplicate) && isDuplicate(parsed.fields.name, contactId)) return { status: "duplicate" };
 
   const contact = updateContactRecord(contactId, parsed.fields);
-  return contact ? { status: "updated", contact } : { status: "not_found" };
+  return contact ? { status: "updated", contact: withStage(contact) } : { status: "not_found" };
 }
 
 export type ChangeStageResult = { status: "updated"; contact: Contact } | { status: "invalid" } | { status: "not_found" };
@@ -174,7 +179,7 @@ export function changeStage(id: unknown, stage: unknown): ChangeStageResult {
   if (!findContactById(contactId)) return { status: "not_found" };
 
   const contact = updateContactStage(contactId, parsed.data);
-  return contact ? { status: "updated", contact } : { status: "not_found" };
+  return contact ? { status: "updated", contact: withStage(contact) } : { status: "not_found" };
 }
 
 // ---------- Lot 5 : qui relancer aujourd'hui

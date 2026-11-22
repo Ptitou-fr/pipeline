@@ -12,10 +12,11 @@ export type ContactRecord = {
   phone: string | null;
   // Date de prochaine relance (lot 5), au format AAAA-MM-JJ.
   followUpDate: string | null;
-  stage: string;
+  // Null pour un contact enregistré avant le lot 4 : la couche service décide de son étape.
+  stage: string | null;
 };
 
-export type NewContactRecord = Omit<ContactRecord, "id">;
+export type NewContactRecord = Omit<ContactRecord, "id" | "stage"> & { stage: string };
 // Informations modifiables par le formulaire : l'étape change à part (updateContactStage).
 export type ContactFields = Omit<ContactRecord, "id" | "stage">;
 
@@ -35,7 +36,7 @@ function database(): DatabaseSync {
       company TEXT,
       email TEXT,
       phone TEXT,
-      stage TEXT NOT NULL DEFAULT 'to_contact',
+      stage TEXT,
       follow_up_date TEXT
     )`);
     migrate(db);
@@ -44,11 +45,11 @@ function database(): DatabaseSync {
 }
 
 // Ajoute les colonnes apparues après la création d'une base existante.
-// Lot 4 : les contacts déjà enregistrés reçoivent l'étape de départ, 'to_contact'.
+// Lot 4 : les contacts déjà enregistrés n'ont pas d'étape (null).
 // Lot 5 : ils n'ont pas de date de relance.
 function migrate(db: DatabaseSync) {
   const columns = new Set(db.prepare("PRAGMA table_info(contacts)").all().map((column) => column.name));
-  if (!columns.has("stage")) db.exec("ALTER TABLE contacts ADD COLUMN stage TEXT NOT NULL DEFAULT 'to_contact'");
+  if (!columns.has("stage")) db.exec("ALTER TABLE contacts ADD COLUMN stage TEXT");
   if (!columns.has("follow_up_date")) db.exec("ALTER TABLE contacts ADD COLUMN follow_up_date TEXT");
 }
 
@@ -59,7 +60,7 @@ const toRecord = (row: Record<string, unknown>): ContactRecord => ({
   email: row.email === null ? null : String(row.email),
   phone: row.phone === null ? null : String(row.phone),
   followUpDate: row.follow_up_date === null ? null : String(row.follow_up_date),
-  stage: String(row.stage),
+  stage: row.stage === null ? null : String(row.stage),
 });
 
 export function insertContact(fields: NewContactRecord): ContactRecord {
